@@ -103,6 +103,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   ];
 
   const xMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/x/manager" },
     { icon: Download, label: "Extractors", path: "/x/extractors" },
     { icon: Send, label: "Publishing", path: "/x/publishing" },
     { icon: Heart, label: "Auto-Interactions", path: "/x/interactions" },
@@ -316,7 +317,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <Button
             variant={isXActive ? "glow" : "ghost"}
             className="w-full justify-center px-3"
-            onClick={() => navigate("/x/extractors")}
+            onClick={() => navigate("/x/manager")}
           >
             <SiX className="h-5 w-5 shrink-0" />
           </Button>
