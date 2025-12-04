@@ -80,6 +80,7 @@ import AIVideoModule from "./pages/ai/AIVideoModule";
 import AITextModule from "./pages/ai/AITextModule";
 import AIAudioModule from "./pages/ai/AIAudioModule";
 import Campaigns from "./pages/Campaigns";
+import ScheduledPosts from "./pages/ScheduledPosts";
 import Points from "./pages/Points";
 import License from "./pages/License";
 import Settings from "./pages/Settings";
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/scheduled-posts" element={<ScheduledPosts />} />
             <Route path="/points" element={<Points />} />
             <Route path="/license" element={<License />} />
             <Route path="/settings" element={<Settings />} />

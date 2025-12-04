@@ -29,7 +29,8 @@ import {
   Image,
   Video,
   Type,
-  Volume2
+  Volume2,
+  CalendarClock
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest, SiReddit, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -82,6 +83,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const topMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: MessageSquare, label: "Campaigns", path: "/campaigns" },
+    { icon: CalendarClock, label: "Scheduled Posts", path: "/scheduled-posts" },
     { icon: Image, label: "AI Image", path: "/ai/image" },
     { icon: Video, label: "AI Video", path: "/ai/video" },
     { icon: Type, label: "Text Tools", path: "/ai/text" },
