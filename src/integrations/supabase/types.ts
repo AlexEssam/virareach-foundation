@@ -447,6 +447,235 @@ export type Database = {
           },
         ]
       }
+      linkedin_accounts: {
+        Row: {
+          account_name: string | null
+          connections_sent_today: number | null
+          created_at: string
+          email: string
+          id: string
+          last_action_at: string | null
+          messages_sent_today: number | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          session_data: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          connections_sent_today?: number | null
+          created_at?: string
+          email: string
+          id?: string
+          last_action_at?: string | null
+          messages_sent_today?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          connections_sent_today?: number | null
+          created_at?: string
+          email?: string
+          id?: string
+          last_action_at?: string | null
+          messages_sent_today?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      linkedin_campaigns: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          campaign_type: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          recipients: string[] | null
+          sending_mode: string
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          recipients?: string[] | null
+          sending_mode?: string
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          recipients?: string[] | null
+          sending_mode?: string
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "linkedin_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      linkedin_connections: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          sent_at: string | null
+          status: string
+          target_name: string | null
+          target_profile_url: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          sent_at?: string | null
+          status?: string
+          target_name?: string | null
+          target_profile_url: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          sent_at?: string | null
+          status?: string
+          target_name?: string | null
+          target_profile_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_connections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "linkedin_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      linkedin_extractions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          filters: Json | null
+          id: string
+          result_count: number | null
+          results: Json | null
+          source: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          filters?: Json | null
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          filters?: Json | null
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points: {
         Row: {
           balance: number
