@@ -266,100 +266,177 @@ export default function WhatsAppAccounts() {
                 <Settings className="h-4 w-4 mr-2" />
                 Rotation Settings
               </Button>
-              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <Dialog open={addDialogOpen} onOpenChange={(open) => {
+                setAddDialogOpen(open);
+                if (!open) {
+                  resetForm();
+                  setQrScanning(false);
+                  setQrConnected(false);
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button variant="hero">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Account
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Add WhatsApp Account</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                      <QrCode className="h-5 w-5 text-[#25D366]" />
+                      Add WhatsApp Account
+                    </DialogTitle>
                     <DialogDescription>
-                      Enter phone number and optional proxy settings
+                      Scan QR code with WhatsApp to connect your account
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phoneNumber">Phone Number *</Label>
-                        <Input
-                          id="phoneNumber"
-                          placeholder="+1234567890"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                        />
+                  
+                  <div className="py-4">
+                    {!qrConnected ? (
+                      <div className="flex flex-col items-center">
+                        {/* QR Code Display */}
+                        <div className="relative w-64 h-64 bg-white rounded-2xl p-4 mb-4">
+                          {qrScanning ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                              <Loader2 className="h-8 w-8 animate-spin text-[#25D366] mb-2" />
+                              <p className="text-sm text-gray-500">Waiting for scan...</p>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Simulated QR Code Pattern */}
+                              <div className="w-full h-full grid grid-cols-8 gap-1">
+                                {Array.from({ length: 64 }).map((_, i) => (
+                                  <div 
+                                    key={i} 
+                                    className={`rounded-sm ${Math.random() > 0.5 ? 'bg-gray-900' : 'bg-white'}`}
+                                  />
+                                ))}
+                              </div>
+                              {/* WhatsApp Logo in center */}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-white p-2 rounded-lg">
+                                  <Smartphone className="h-8 w-8 text-[#25D366]" />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="text-center space-y-3 mb-4">
+                          <p className="text-sm font-medium">How to scan:</p>
+                          <ol className="text-xs text-muted-foreground space-y-1 text-left">
+                            <li>1. Open WhatsApp on your phone</li>
+                            <li>2. Tap Menu (⋮) or Settings → Linked Devices</li>
+                            <li>3. Tap "Link a Device"</li>
+                            <li>4. Point your phone at this QR code</li>
+                          </ol>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 w-full">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => {
+                              // Regenerate QR code (simulate)
+                              setQrScanning(false);
+                            }}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Refresh QR
+                          </Button>
+                          <Button 
+                            className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90"
+                            onClick={() => {
+                              setQrScanning(true);
+                              // Simulate connection after 3 seconds
+                              setTimeout(() => {
+                                setQrConnected(true);
+                                setQrScanning(false);
+                              }, 3000);
+                            }}
+                            disabled={qrScanning}
+                          >
+                            {qrScanning ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <QrCode className="h-4 w-4 mr-2" />
+                            )}
+                            {qrScanning ? "Scanning..." : "Simulate Scan"}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="accountName">Account Name</Label>
-                        <Input
-                          id="accountName"
-                          placeholder="Main Account"
-                          value={accountName}
-                          onChange={(e) => setAccountName(e.target.value)}
-                        />
+                    ) : (
+                      <div className="flex flex-col items-center py-4">
+                        {/* Connected Success */}
+                        <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
+                          <CheckCircle className="h-10 w-10 text-[#25D366]" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">Connected!</h3>
+                        <p className="text-sm text-muted-foreground mb-6 text-center">
+                          Your WhatsApp account has been linked successfully
+                        </p>
+
+                        {/* Account Details Form */}
+                        <div className="w-full space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="accountName">Account Name (Optional)</Label>
+                            <Input
+                              id="accountName"
+                              placeholder="e.g., Business Account"
+                              value={accountName}
+                              onChange={(e) => setAccountName(e.target.value)}
+                            />
+                          </div>
+                          
+                          <Button 
+                            className="w-full bg-[#25D366] hover:bg-[#25D366]/90"
+                            onClick={async () => {
+                              setAdding(true);
+                              try {
+                                const { error } = await supabase
+                                  .from("whatsapp_accounts")
+                                  .insert({
+                                    user_id: user!.id,
+                                    phone_number: `+${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+                                    account_name: accountName.trim() || `WhatsApp Account ${accounts.length + 1}`,
+                                    status: "active",
+                                  });
+
+                                if (error) throw error;
+
+                                toast({
+                                  title: "Account Added!",
+                                  description: "WhatsApp account connected successfully",
+                                });
+                                
+                                setAddDialogOpen(false);
+                                resetForm();
+                                setQrConnected(false);
+                                fetchAccounts();
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.message || "Failed to save account",
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setAdding(false);
+                              }
+                            }}
+                            disabled={adding}
+                          >
+                            {adding ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            )}
+                            Save Account
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="border-t border-border pt-4">
-                      <p className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Proxy Settings (Optional)
-                      </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="proxyHost">Proxy Host</Label>
-                          <Input
-                            id="proxyHost"
-                            placeholder="proxy.example.com"
-                            value={proxyHost}
-                            onChange={(e) => setProxyHost(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="proxyPort">Proxy Port</Label>
-                          <Input
-                            id="proxyPort"
-                            placeholder="8080"
-                            type="number"
-                            value={proxyPort}
-                            onChange={(e) => setProxyPort(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="proxyUsername">Username</Label>
-                          <Input
-                            id="proxyUsername"
-                            placeholder="username"
-                            value={proxyUsername}
-                            onChange={(e) => setProxyUsername(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="proxyPassword">Password</Label>
-                          <Input
-                            id="proxyPassword"
-                            placeholder="password"
-                            type="password"
-                            value={proxyPassword}
-                            onChange={(e) => setProxyPassword(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => {
-                      setAddDialogOpen(false);
-                      resetForm();
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddAccount} disabled={adding}>
-                      {adding && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Add Account
-                    </Button>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
