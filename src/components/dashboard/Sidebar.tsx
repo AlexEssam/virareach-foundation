@@ -229,6 +229,11 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           </Button>
         ))}
 
+        {/* Separator between AI Tools and Social Media Tools */}
+        <div className="py-2">
+          <div className="border-t border-border/50" />
+        </div>
+
         {/* Facebook Tools Section */}
         {!collapsed ? (
           <Collapsible open={facebookOpen} onOpenChange={setFacebookOpen}>
