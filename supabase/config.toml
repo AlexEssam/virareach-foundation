@@ -170,3 +170,6 @@ verify_jwt = true
 
 [functions.ai-video]
 verify_jwt = true
+
+[functions.ai-text]
+verify_jwt = true
