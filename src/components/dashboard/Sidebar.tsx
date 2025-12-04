@@ -23,7 +23,8 @@ import {
   Mail,
   FileText,
   Database,
-  Smartphone
+  Smartphone,
+  AtSign
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -97,6 +98,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/instagram/extractor" },
     { icon: UserPlus, label: "Follow/Unfollow", path: "/instagram/follow" },
     { icon: Send, label: "Messaging", path: "/instagram/messaging" },
+    { icon: BarChart3, label: "Analytics", path: "/instagram/analytics" },
+    { icon: AtSign, label: "Mentions", path: "/instagram/mentions" },
   ];
 
   const xMenuItems = [
