@@ -3,9 +3,10 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, LogIn, FolderOpen } from "lucide-react";
+import { Plus, Trash2, LogIn, FolderOpen, Eye, EyeOff, UserPlus, ChevronDown, Settings } from "lucide-react";
 import { SiInstagram } from "@icons-pack/react-simple-icons";
 import {
   Dialog,
@@ -22,11 +23,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface InstagramAccount {
   id: string;
   username: string;
   account_name: string | null;
+  account_email: string | null;
+  account_password: string | null;
   status: string;
   followers_count: number;
   following_count: number;
@@ -45,12 +53,15 @@ export default function InstagramAccounts() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [proxyOpen, setProxyOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     username: "",
     account_name: "",
-    session_data: "",
+    account_email: "",
+    account_password: "",
     profile_path: "",
     proxy_host: "",
     proxy_port: "",
@@ -83,7 +94,6 @@ export default function InstagramAccounts() {
 
   const handleBrowseFolder = async () => {
     try {
-      // Use File System Access API if available
       if ('showDirectoryPicker' in window) {
         const dirHandle = await (window as any).showDirectoryPicker({
           mode: 'readwrite',
@@ -95,7 +105,6 @@ export default function InstagramAccounts() {
           description: `Selected folder: ${dirHandle.name}`,
         });
       } else {
-        // Fallback for browsers that don't support showDirectoryPicker
         toast({
           title: "Not Supported",
           description: "Please enter the folder path manually",
@@ -114,10 +123,10 @@ export default function InstagramAccounts() {
   };
 
   const handleAddAccount = async () => {
-    if (!formData.profile_path) {
+    if (!formData.username) {
       toast({
         title: "Error",
-        description: "Please select or enter a folder path",
+        description: "Username is required",
         variant: "destructive",
       });
       return;
@@ -127,10 +136,11 @@ export default function InstagramAccounts() {
       const { data, error } = await supabase.functions.invoke("instagram-accounts", {
         body: {
           action: "add",
-          username: formData.username || formData.account_name,
-          account_name: formData.account_name,
-          session_data: formData.session_data,
-          profile_path: formData.profile_path,
+          username: formData.username,
+          account_name: formData.account_name || formData.username,
+          account_email: formData.account_email || null,
+          account_password: formData.account_password || null,
+          profile_path: formData.profile_path || null,
           proxy_host: formData.proxy_host || null,
           proxy_port: formData.proxy_port ? parseInt(formData.proxy_port) : null,
           proxy_username: formData.proxy_username || null,
@@ -145,7 +155,8 @@ export default function InstagramAccounts() {
       setFormData({
         username: "",
         account_name: "",
-        session_data: "",
+        account_email: "",
+        account_password: "",
         profile_path: "",
         proxy_host: "",
         proxy_port: "",
@@ -183,17 +194,47 @@ export default function InstagramAccounts() {
 
   const handleLogin = (account: InstagramAccount) => {
     window.open("https://www.instagram.com/accounts/login/", "_blank");
+    
+    if (account.account_email && account.account_password) {
+      toast({
+        title: "Login Credentials",
+        description: (
+          <div className="space-y-2 mt-2">
+            <p><strong>Email/Phone:</strong> {account.account_email}</p>
+            <p><strong>Password:</strong> {account.account_password}</p>
+          </div>
+        ) as any,
+        duration: 10000,
+      });
+    } else {
+      toast({
+        title: "Login to Instagram",
+        description: `Please login with account: ${account.username}`,
+      });
+    }
+  };
+
+  const handleOpenSignUp = () => {
+    window.open("https://www.instagram.com/accounts/emailsignup/", "_blank");
     toast({
-      title: "Login to Instagram",
-      description: `Please login with account: ${account.username}`,
+      title: "Sign Up",
+      description: "Instagram signup page opened. Create your account and save credentials here.",
+    });
+  };
+
+  const handleOpenLogin = () => {
+    window.open("https://www.instagram.com/accounts/login/", "_blank");
+    toast({
+      title: "Login",
+      description: "Instagram login page opened. Log in and save your credentials here.",
     });
   };
 
   const getStatusLabel = (account: InstagramAccount) => {
-    if (account.session_data) {
-      return "Logged";
+    if (account.account_email && account.account_password) {
+      return <Badge className="bg-green-500 hover:bg-green-600">Logged</Badge>;
     }
-    return "Not_logged";
+    return <Badge variant="secondary">Not_logged</Badge>;
   };
 
   return (
@@ -218,11 +259,76 @@ export default function InstagramAccounts() {
                   Create Channel
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Instagram Channel</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  {/* Open Instagram Buttons */}
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={handleOpenSignUp}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={handleOpenLogin}
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </Button>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      After logging into Instagram, save your credentials below:
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label>Instagram Username *</Label>
+                    <Input
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="@username"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Email / Phone Number</Label>
+                    <Input
+                      value={formData.account_email}
+                      onChange={(e) => setFormData({ ...formData, account_email: e.target.value })}
+                      placeholder="email@example.com or phone"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={formData.account_password}
+                        onChange={(e) => setFormData({ ...formData, account_password: e.target.value })}
+                        placeholder="Enter password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
                   <div>
                     <Label>Channel Name</Label>
                     <Input
@@ -231,6 +337,7 @@ export default function InstagramAccounts() {
                       placeholder="My Business Channel"
                     />
                   </div>
+
                   <div>
                     <Label>Profile Folder</Label>
                     <div className="flex gap-2">
@@ -249,63 +356,63 @@ export default function InstagramAccounts() {
                         <FolderOpen className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Select or create a folder for this channel's profile data
-                    </p>
                   </div>
-                  <div>
-                    <Label>Username (optional)</Label>
-                    <Input
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div>
-                    <Label>Session Data (optional)</Label>
-                    <Input
-                      value={formData.session_data}
-                      onChange={(e) => setFormData({ ...formData, session_data: e.target.value })}
-                      placeholder="Session cookies or token"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Proxy Host</Label>
-                      <Input
-                        value={formData.proxy_host}
-                        onChange={(e) => setFormData({ ...formData, proxy_host: e.target.value })}
-                        placeholder="proxy.example.com"
-                      />
-                    </div>
-                    <div>
-                      <Label>Proxy Port</Label>
-                      <Input
-                        value={formData.proxy_port}
-                        onChange={(e) => setFormData({ ...formData, proxy_port: e.target.value })}
-                        placeholder="8080"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Proxy Username</Label>
-                      <Input
-                        value={formData.proxy_username}
-                        onChange={(e) => setFormData({ ...formData, proxy_username: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Proxy Password</Label>
-                      <Input
-                        type="password"
-                        value={formData.proxy_password}
-                        onChange={(e) => setFormData({ ...formData, proxy_password: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleAddAccount} className="w-full bg-[hsl(346,84%,46%)] hover:bg-[hsl(346,84%,40%)] text-white">
-                    Create Channel
+
+                  {/* Proxy Settings (Collapsible) */}
+                  <Collapsible open={proxyOpen} onOpenChange={setProxyOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between p-0 h-auto">
+                        <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Settings className="h-4 w-4" />
+                          Proxy Settings (Optional)
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${proxyOpen ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Proxy Host</Label>
+                          <Input
+                            value={formData.proxy_host}
+                            onChange={(e) => setFormData({ ...formData, proxy_host: e.target.value })}
+                            placeholder="proxy.example.com"
+                          />
+                        </div>
+                        <div>
+                          <Label>Proxy Port</Label>
+                          <Input
+                            value={formData.proxy_port}
+                            onChange={(e) => setFormData({ ...formData, proxy_port: e.target.value })}
+                            placeholder="8080"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Proxy Username</Label>
+                          <Input
+                            value={formData.proxy_username}
+                            onChange={(e) => setFormData({ ...formData, proxy_username: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <Label>Proxy Password</Label>
+                          <Input
+                            type="password"
+                            value={formData.proxy_password}
+                            onChange={(e) => setFormData({ ...formData, proxy_password: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Button 
+                    onClick={handleAddAccount} 
+                    className="w-full bg-[hsl(346,84%,46%)] hover:bg-[hsl(346,84%,40%)] text-white"
+                  >
+                    Save Channel
                   </Button>
                 </div>
               </DialogContent>
@@ -318,7 +425,7 @@ export default function InstagramAccounts() {
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-16 font-semibold">ID</TableHead>
                   <TableHead className="font-semibold">Channels</TableHead>
-                  <TableHead className="font-semibold">Active</TableHead>
+                  <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Path</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
                   <TableHead className="font-semibold">Login</TableHead>
@@ -350,18 +457,14 @@ export default function InstagramAccounts() {
                       <TableCell className="font-medium">
                         {account.account_name || account.username}
                       </TableCell>
-                      <TableCell>
-                        <span className={account.status === 'active' ? 'text-green-500' : 'text-muted-foreground'}>
-                          {account.status === 'active' ? 'Yes' : 'No'}
-                        </span>
+                      <TableCell className="text-muted-foreground">
+                        {account.account_email || "-"}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {account.profile_path || "N/A"}
                       </TableCell>
                       <TableCell>
-                        <span className={account.session_data ? 'text-green-500' : 'text-orange-500'}>
-                          {getStatusLabel(account)}
-                        </span>
+                        {getStatusLabel(account)}
                       </TableCell>
                       <TableCell>
                         <Button
