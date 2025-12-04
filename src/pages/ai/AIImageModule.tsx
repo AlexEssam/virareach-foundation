@@ -188,10 +188,11 @@ export default function AIImageModule() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => callAIImage('batch_generate', { prompt, count: batchCount })}
+                      onClick={() => callAIImage('batch_generate', { prompt, count: batchCount, high_quality: true })}
                       disabled={loading || !prompt}
                     >
-                      Batch Generate ({batchCount})
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      توليد {batchCount} صور بجودة عالية
                     </Button>
                     <Select value={batchCount.toString()} onValueChange={(v) => setBatchCount(parseInt(v))}>
                       <SelectTrigger className="w-24">

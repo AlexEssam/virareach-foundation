@@ -36,7 +36,7 @@ serve(async (req) => {
       });
     }
 
-    const { action, prompt, image, model, size, strength, style_id, count, mask, scale } = await req.json();
+    const { action, prompt, image, model, size, strength, style_id, count, mask, scale, ...params } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
@@ -47,6 +47,11 @@ serve(async (req) => {
 
     switch (action) {
       case 'generate_image': {
+        const highQuality = params?.high_quality !== false;
+        const enhancedPrompt = highQuality 
+          ? `${prompt}. Ultra high resolution, extremely detailed, professional quality, 8K, masterpiece, sharp focus`
+          : prompt;
+          
         const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -55,7 +60,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: 'google/gemini-2.5-flash-image-preview',
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'user', content: enhancedPrompt }],
             modalities: ['image', 'text'],
           }),
         });
@@ -313,6 +318,12 @@ serve(async (req) => {
 
       case 'batch_generate': {
         const numImages = Math.min(count || 4, 6);
+        const highQuality = params?.high_quality !== false;
+        
+        // Enhanced prompt for high quality generation
+        const enhancedPrompt = highQuality 
+          ? `${prompt}. Ultra high resolution, extremely detailed, professional quality, 8K, masterpiece, sharp focus, intricate details, photorealistic lighting`
+          : prompt;
         
         // Run all batch requests in parallel for faster generation
         const batchPromises = Array.from({ length: numImages }, (_, i) =>
@@ -324,7 +335,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               model: 'google/gemini-2.5-flash-image-preview',
-              messages: [{ role: 'user', content: `${prompt} (variation ${i + 1})` }],
+              messages: [{ role: 'user', content: `${enhancedPrompt} (unique variation ${i + 1}, different composition and style)` }],
               modalities: ['image', 'text'],
             }),
           }).then(async (response) => {
