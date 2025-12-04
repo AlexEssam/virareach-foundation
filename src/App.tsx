@@ -12,6 +12,9 @@ import FacebookAccounts from "./pages/facebook/FacebookAccounts";
 import FacebookExtractor from "./pages/facebook/FacebookExtractor";
 import FacebookPublisher from "./pages/facebook/FacebookPublisher";
 import FacebookGroupAnalyzer from "./pages/facebook/FacebookGroupAnalyzer";
+import FacebookMessaging from "./pages/facebook/FacebookMessaging";
+import FacebookSocial from "./pages/facebook/FacebookSocial";
+import FacebookGroups from "./pages/facebook/FacebookGroups";
 import WhatsAppSending from "./pages/whatsapp/WhatsAppSending";
 import WhatsAppExtractor from "./pages/whatsapp/WhatsAppExtractor";
 import WhatsAppGroups from "./pages/whatsapp/WhatsAppGroups";
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/facebook/extractor" element={<FacebookExtractor />} />
             <Route path="/facebook/publisher" element={<FacebookPublisher />} />
             <Route path="/facebook/analyzer" element={<FacebookGroupAnalyzer />} />
+            <Route path="/facebook/messaging" element={<FacebookMessaging />} />
+            <Route path="/facebook/social" element={<FacebookSocial />} />
+            <Route path="/facebook/groups" element={<FacebookGroups />} />
             <Route path="/whatsapp/sending" element={<WhatsAppSending />} />
             <Route path="/whatsapp/extractor" element={<WhatsAppExtractor />} />
             <Route path="/whatsapp/groups" element={<WhatsAppGroups />} />

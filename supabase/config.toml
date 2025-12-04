@@ -15,6 +15,15 @@ verify_jwt = true
 [functions.facebook-analyze]
 verify_jwt = true
 
+[functions.facebook-messaging]
+verify_jwt = true
+
+[functions.facebook-social]
+verify_jwt = true
+
+[functions.facebook-groups]
+verify_jwt = true
+
 [functions.whatsapp-send]
 verify_jwt = true
 
