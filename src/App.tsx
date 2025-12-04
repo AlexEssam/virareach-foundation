@@ -31,6 +31,7 @@ import LinkedInMessaging from "./pages/linkedin/LinkedInMessaging";
 import LinkedInAnalysis from "./pages/linkedin/LinkedInAnalysis";
 import EmailCampaigns from "./pages/email/EmailCampaigns";
 import EmailTemplates from "./pages/email/EmailTemplates";
+import B2BDataCenter from "./pages/b2b/B2BDataCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/linkedin/analysis" element={<LinkedInAnalysis />} />
             <Route path="/email/campaigns" element={<EmailCampaigns />} />
             <Route path="/email/templates" element={<EmailTemplates />} />
+            <Route path="/b2b/data-center" element={<B2BDataCenter />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

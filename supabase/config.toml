@@ -65,3 +65,9 @@ verify_jwt = true
 
 [functions.linkedin-send]
 verify_jwt = true
+
+[functions.email-send]
+verify_jwt = true
+
+[functions.b2b-extract]
+verify_jwt = true
