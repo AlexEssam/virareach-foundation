@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Image, 
   Wand2, 
@@ -19,10 +21,13 @@ import {
   Layers,
   PenTool,
   Download,
-  Loader2
+  Loader2,
+  LogIn
 } from "lucide-react";
 
 export default function AIImageModule() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -112,6 +117,34 @@ export default function AIImageModule() {
     { id: 'vintage', name: 'Vintage' },
     { id: 'minimalist', name: 'Minimalist' },
   ];
+
+  // Show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="max-w-md mx-auto mt-20">
+            <Card>
+              <CardHeader className="text-center">
+                <Image className="h-12 w-12 text-primary mx-auto mb-2" />
+                <CardTitle>Login Required</CardTitle>
+                <CardDescription>
+                  Please log in to access AI Image features
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Button onClick={() => navigate('/login')}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Go to Login
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">

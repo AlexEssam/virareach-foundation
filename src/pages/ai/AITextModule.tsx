@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, PenTool, Megaphone, Video, Copy, Loader2, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { FileText, PenTool, Megaphone, Video, Copy, Loader2, Sparkles, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AITextModule() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
@@ -91,6 +95,34 @@ export default function AITextModule() {
     navigator.clipboard.writeText(result);
     toast.success("Copied to clipboard!");
   };
+
+  // Show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="max-w-md mx-auto mt-20">
+            <Card>
+              <CardHeader className="text-center">
+                <Sparkles className="h-12 w-12 text-primary mx-auto mb-2" />
+                <CardTitle>Login Required</CardTitle>
+                <CardDescription>
+                  Please log in to access AI Text features
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Button onClick={() => navigate('/login')}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Go to Login
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
