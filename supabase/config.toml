@@ -23,3 +23,39 @@ verify_jwt = true
 
 [functions.whatsapp-groups]
 verify_jwt = true
+
+[functions.instagram-accounts]
+verify_jwt = true
+
+[functions.instagram-extract]
+verify_jwt = true
+
+[functions.instagram-follow]
+verify_jwt = true
+
+[functions.instagram-send]
+verify_jwt = true
+
+[functions.x-extract]
+verify_jwt = true
+
+[functions.x-publish]
+verify_jwt = true
+
+[functions.x-interact]
+verify_jwt = true
+
+[functions.x-trends]
+verify_jwt = true
+
+[functions.telegram-accounts]
+verify_jwt = true
+
+[functions.telegram-extract]
+verify_jwt = true
+
+[functions.telegram-send]
+verify_jwt = true
+
+[functions.telegram-groups]
+verify_jwt = true

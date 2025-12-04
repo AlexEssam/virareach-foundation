@@ -20,7 +20,7 @@ import {
   TrendingUp,
   Heart
 } from "lucide-react";
-import { SiFacebook, SiWhatsapp, SiInstagram, SiX } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -36,6 +36,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [whatsappOpen, setWhatsappOpen] = useState(location.pathname.startsWith("/whatsapp"));
   const [instagramOpen, setInstagramOpen] = useState(location.pathname.startsWith("/instagram"));
   const [xOpen, setXOpen] = useState(location.pathname.startsWith("/x"));
+  const [telegramOpen, setTelegramOpen] = useState(location.pathname.startsWith("/telegram"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -47,6 +48,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isWhatsappActive = location.pathname.startsWith("/whatsapp");
   const isInstagramActive = location.pathname.startsWith("/instagram");
   const isXActive = location.pathname.startsWith("/x");
+  const isTelegramActive = location.pathname.startsWith("/telegram");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -81,6 +83,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Send, label: "Publishing", path: "/x/publishing" },
     { icon: Heart, label: "Auto-Interactions", path: "/x/interactions" },
     { icon: TrendingUp, label: "Trends Monitor", path: "/x/trends" },
+  ];
+
+  const telegramMenuItems = [
+    { icon: Download, label: "Extractor", path: "/telegram/extractor" },
+    { icon: Send, label: "Sender", path: "/telegram/sender" },
+    { icon: Users, label: "Group Manager", path: "/telegram/groups" },
   ];
 
   return (
@@ -263,6 +271,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/x/extractors")}
           >
             <SiX className="h-5 w-5 shrink-0" />
+          </Button>
+        )}
+
+        {/* Telegram Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={telegramOpen} onOpenChange={setTelegramOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isTelegramActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiTelegram className="h-5 w-5 shrink-0" color="#26A5E4" />
+                  <span>Telegram Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${telegramOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {telegramMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isTelegramActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/telegram/extractor")}
+          >
+            <SiTelegram className="h-5 w-5 shrink-0" color="#26A5E4" />
           </Button>
         )}
       </nav>

@@ -541,6 +541,256 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_accounts: {
+        Row: {
+          account_name: string | null
+          api_hash: string | null
+          api_id: string | null
+          created_at: string
+          groups_joined_today: number | null
+          id: string
+          last_action_at: string | null
+          messages_sent_today: number | null
+          phone_number: string
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          session_data: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          api_hash?: string | null
+          api_id?: string | null
+          created_at?: string
+          groups_joined_today?: number | null
+          id?: string
+          last_action_at?: string | null
+          messages_sent_today?: number | null
+          phone_number: string
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          api_hash?: string | null
+          api_id?: string | null
+          created_at?: string
+          groups_joined_today?: number | null
+          id?: string
+          last_action_at?: string | null
+          messages_sent_today?: number | null
+          phone_number?: string
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_campaigns: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          media_url: string | null
+          message_type: string
+          recipients: string[] | null
+          sending_mode: string
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          target_type: string
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipients?: string[] | null
+          sending_mode?: string
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          target_type?: string
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipients?: string[] | null
+          sending_mode?: string
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          target_type?: string
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_extractions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          result_count: number | null
+          results: Json | null
+          source: string | null
+          source_group_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          source_group_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          source_group_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_groups: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          group_id: string | null
+          group_name: string
+          group_type: string | null
+          id: string
+          invite_link: string | null
+          is_public: boolean | null
+          joined_at: string | null
+          member_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          group_name: string
+          group_type?: string | null
+          id?: string
+          invite_link?: string | null
+          is_public?: boolean | null
+          joined_at?: string | null
+          member_count?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          group_id?: string | null
+          group_name?: string
+          group_type?: string | null
+          id?: string
+          invite_link?: string | null
+          is_public?: boolean | null
+          joined_at?: string | null
+          member_count?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_groups_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_groups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
