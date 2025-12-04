@@ -111,6 +111,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Users, label: "Account Checker", path: "/x/accounts" },
     { icon: BarChart3, label: "Bookmarks", path: "/x/bookmarks" },
     { icon: Settings, label: "Tweet Monitor", path: "/x/monitor" },
+    { icon: TrendingUp, label: "X Plus AI", path: "/x/plus" },
   ];
 
   const telegramMenuItems = [

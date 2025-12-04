@@ -69,6 +69,9 @@ verify_jwt = true
 [functions.x-trends]
 verify_jwt = true
 
+[functions.x-plus-ai]
+verify_jwt = true
+
 [functions.telegram-accounts]
 verify_jwt = true
 

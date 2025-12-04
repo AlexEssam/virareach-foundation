@@ -37,6 +37,7 @@ import XAccounts from "./pages/x/XAccounts";
 import XBookmarks from "./pages/x/XBookmarks";
 import XTweetMonitor from "./pages/x/XTweetMonitor";
 import XAccountManager from "./pages/x/XAccountManager";
+import XPlus from "./pages/x/XPlus";
 import TelegramExtractor from "./pages/telegram/TelegramExtractor";
 import TelegramSender from "./pages/telegram/TelegramSender";
 import TelegramGroups from "./pages/telegram/TelegramGroups";
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/x/accounts" element={<XAccounts />} />
             <Route path="/x/bookmarks" element={<XBookmarks />} />
             <Route path="/x/monitor" element={<XTweetMonitor />} />
+            <Route path="/x/plus" element={<XPlus />} />
             <Route path="/telegram/extractor" element={<TelegramExtractor />} />
             <Route path="/telegram/sender" element={<TelegramSender />} />
             <Route path="/telegram/groups" element={<TelegramGroups />} />
