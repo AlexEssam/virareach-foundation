@@ -75,6 +75,7 @@ import VKCommunities from "./pages/vk/VKCommunities";
 import GoogleMapsExtractor from "./pages/googlemaps/GoogleMapsExtractor";
 import GoogleMapsBusinesses from "./pages/googlemaps/GoogleMapsBusinesses";
 import GoogleMapsReviews from "./pages/googlemaps/GoogleMapsReviews";
+import AIImageModule from "./pages/ai/AIImageModule";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -158,6 +159,7 @@ const App = () => (
             <Route path="/googlemaps/extractor" element={<GoogleMapsExtractor />} />
             <Route path="/googlemaps/businesses" element={<GoogleMapsBusinesses />} />
             <Route path="/googlemaps/reviews" element={<GoogleMapsReviews />} />
+            <Route path="/ai/image" element={<AIImageModule />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

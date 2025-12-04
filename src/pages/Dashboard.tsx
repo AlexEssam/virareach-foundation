@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ModuleCard } from "@/components/dashboard/ModuleCard";
 import { LicenseStatus } from "@/components/dashboard/LicenseStatus";
-import { Coins, Zap, Send, Activity } from "lucide-react";
+import { Coins, Zap, Send, Activity, Image } from "lucide-react";
 import { 
   SiFacebook, 
   SiWhatsapp, 
@@ -99,24 +99,35 @@ export default function Dashboard() {
       description: "Automate posts, messages, and engagement",
       icon: SiFacebook,
       color: "#1877F2",
+      path: "/facebook/accounts",
     },
     {
       title: "WhatsApp",
       description: "Bulk messaging and auto-replies",
       icon: SiWhatsapp,
       color: "#25D366",
+      path: "/whatsapp/accounts",
     },
     {
       title: "Instagram",
       description: "Schedule posts and manage DMs",
       icon: SiInstagram,
       color: "#E4405F",
+      path: "/instagram/accounts",
     },
     {
       title: "Telegram",
       description: "Channel management and bots",
       icon: SiTelegram,
       color: "#0088CC",
+      path: "/telegram/accounts",
+    },
+    {
+      title: "AI Image",
+      description: "Generate and edit images with AI",
+      icon: Image,
+      color: "#8B5CF6",
+      path: "/ai/image",
     },
   ];
 
@@ -193,10 +204,14 @@ export default function Dashboard() {
                     color={module.color}
                     locked={!license}
                     onClick={() => {
-                      toast({
-                        title: `${module.title} Module`,
-                        description: "This module is coming soon!",
-                      });
+                      if (module.path) {
+                        navigate(module.path);
+                      } else {
+                        toast({
+                          title: `${module.title} Module`,
+                          description: "This module is coming soon!",
+                        });
+                      }
                     }}
                   />
                 </div>
