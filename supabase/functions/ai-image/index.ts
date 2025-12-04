@@ -186,11 +186,11 @@ serve(async (req) => {
       }
 
       case 'variations': {
-        const variations = [];
         const numVariations = Math.min(count || 2, 4);
         
-        for (let i = 0; i < numVariations; i++) {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        // Run all variation requests in parallel for faster generation
+        const variationPromises = Array.from({ length: numVariations }, (_, i) =>
+          fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -207,14 +207,17 @@ serve(async (req) => {
               }],
               modalities: ['image', 'text'],
             }),
-          });
+          }).then(async (response) => {
+            if (response.ok) {
+              const data = await response.json();
+              return data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            }
+            return null;
+          }).catch(() => null)
+        );
 
-          if (response.ok) {
-            const data = await response.json();
-            const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-            if (imageUrl) variations.push(imageUrl);
-          }
-        }
+        const results = await Promise.all(variationPromises);
+        const variations = results.filter(Boolean);
         
         return new Response(JSON.stringify({ images: variations }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -309,11 +312,11 @@ serve(async (req) => {
       }
 
       case 'batch_generate': {
-        const images = [];
         const numImages = Math.min(count || 4, 6);
         
-        for (let i = 0; i < numImages; i++) {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        // Run all batch requests in parallel for faster generation
+        const batchPromises = Array.from({ length: numImages }, (_, i) =>
+          fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -324,14 +327,17 @@ serve(async (req) => {
               messages: [{ role: 'user', content: `${prompt} (variation ${i + 1})` }],
               modalities: ['image', 'text'],
             }),
-          });
+          }).then(async (response) => {
+            if (response.ok) {
+              const data = await response.json();
+              return data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            }
+            return null;
+          }).catch(() => null)
+        );
 
-          if (response.ok) {
-            const data = await response.json();
-            const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-            if (imageUrl) images.push(imageUrl);
-          }
-        }
+        const results = await Promise.all(batchPromises);
+        const images = results.filter(Boolean);
         
         return new Response(JSON.stringify({ images }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
