@@ -110,3 +110,57 @@ verify_jwt = true
 
 [functions.tiktok-mentions]
 verify_jwt = true
+
+[functions.pinterest-accounts]
+verify_jwt = true
+
+[functions.pinterest-extract]
+verify_jwt = true
+
+[functions.pinterest-follow]
+verify_jwt = true
+
+[functions.pinterest-post]
+verify_jwt = true
+
+[functions.pinterest-send]
+verify_jwt = true
+
+[functions.reddit-accounts]
+verify_jwt = true
+
+[functions.reddit-actions]
+verify_jwt = true
+
+[functions.reddit-communities]
+verify_jwt = true
+
+[functions.snapchat-accounts]
+verify_jwt = true
+
+[functions.snapchat-extract]
+verify_jwt = true
+
+[functions.snapchat-send]
+verify_jwt = true
+
+[functions.vk-accounts]
+verify_jwt = true
+
+[functions.vk-communities]
+verify_jwt = true
+
+[functions.vk-extract]
+verify_jwt = true
+
+[functions.vk-send]
+verify_jwt = true
+
+[functions.google-maps-extract]
+verify_jwt = true
+
+[functions.google-maps-export]
+verify_jwt = true
+
+[functions.google-maps-reviews]
+verify_jwt = true
