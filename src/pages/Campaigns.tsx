@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,12 @@ import {
   Mail,
   Instagram,
   Linkedin,
-  MoreHorizontal,
-  ArrowUpRight,
   Activity,
-  Users,
-  Clock
+  Clock,
+  Upload,
+  Image,
+  Video,
+  X
 } from "lucide-react";
 import { SiPinterest, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { format } from "date-fns";
@@ -57,6 +58,10 @@ export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     platform: 'email',
@@ -164,13 +169,78 @@ export default function Campaigns() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (50MB max)
+    if (file.size > 52428800) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload an image or video.');
+      return;
+    }
+
+    setMediaFile(file);
+    
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setMediaPreview(previewUrl);
+  };
+
+  const removeMedia = () => {
+    setMediaFile(null);
+    if (mediaPreview) {
+      URL.revokeObjectURL(mediaPreview);
+      setMediaPreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadMedia = async (): Promise<string | null> => {
+    if (!mediaFile || !user) return null;
+
+    const fileExt = mediaFile.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('campaign-media')
+      .upload(fileName, mediaFile);
+
+    if (error) {
+      console.error('Upload error:', error);
+      throw new Error('Failed to upload media');
+    }
+
+    const { data: publicUrl } = supabase.storage
+      .from('campaign-media')
+      .getPublicUrl(fileName);
+
+    return publicUrl.publicUrl;
+  };
+
   const createCampaign = async () => {
     if (!newCampaign.name || !user) {
       toast.error('Please fill in all required fields');
       return;
     }
 
+    setUploading(true);
+
     try {
+      // Upload media if present
+      let mediaUrl: string | null = null;
+      if (mediaFile) {
+        mediaUrl = await uploadMedia();
+      }
+
       const campaignData: any = {
         user_id: user.id,
         campaign_name: newCampaign.name,
@@ -187,7 +257,8 @@ export default function Campaigns() {
         error = result.error;
       } else if (newCampaign.platform === 'instagram') {
         campaignData.campaign_type = newCampaign.type;
-        campaignData.message_type = 'text';
+        campaignData.message_type = mediaUrl ? 'media' : 'text';
+        campaignData.media_url = mediaUrl;
         const result = await supabase.from('instagram_campaigns').insert(campaignData);
         error = result.error;
       } else if (newCampaign.platform === 'linkedin') {
@@ -197,11 +268,13 @@ export default function Campaigns() {
         error = result.error;
       } else if (newCampaign.platform === 'pinterest') {
         campaignData.campaign_type = newCampaign.type;
-        campaignData.message_type = 'text';
+        campaignData.message_type = mediaUrl ? 'media' : 'text';
+        campaignData.media_url = mediaUrl;
         const result = await supabase.from('pinterest_campaigns').insert(campaignData);
         error = result.error;
       } else if (newCampaign.platform === 'snapchat') {
-        campaignData.message_type = 'text';
+        campaignData.message_type = mediaUrl ? 'media' : 'text';
+        campaignData.media_url = mediaUrl;
         const result = await supabase.from('snapchat_campaigns').insert(campaignData);
         error = result.error;
       }
@@ -211,10 +284,13 @@ export default function Campaigns() {
       toast.success('Campaign created successfully!');
       setCreateDialogOpen(false);
       setNewCampaign({ name: '', platform: 'email', type: 'message', content: '', scheduled_at: '' });
+      removeMedia();
       loadCampaigns();
     } catch (error: any) {
       console.error('Error creating campaign:', error);
       toast.error(error.message || 'Failed to create campaign');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -248,6 +324,8 @@ export default function Campaigns() {
     totalSent: campaigns.reduce((acc, c) => acc + c.sent_count, 0),
   };
 
+  const isVideoFile = mediaFile?.type.startsWith('video/');
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -259,7 +337,10 @@ export default function Campaigns() {
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">Campaigns</h1>
               <p className="text-muted-foreground mt-1">Manage and monitor your marketing campaigns</p>
             </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <Dialog open={createDialogOpen} onOpenChange={(open) => {
+              setCreateDialogOpen(open);
+              if (!open) removeMedia();
+            }}>
               <DialogTrigger asChild>
                 <Button className="shrink-0">
                   <Plus className="h-4 w-4 mr-2" />
@@ -324,16 +405,85 @@ export default function Campaigns() {
                       placeholder="Write your campaign message here..."
                       value={newCampaign.content}
                       onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
-                      rows={4}
+                      rows={3}
                     />
+                  </div>
+
+                  {/* Media Upload */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Media (Optional)</label>
+                    {!mediaPreview ? (
+                      <div 
+                        className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                            <Upload className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Upload photo or video</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG, GIF, WEBP, MP4, WEBM (max 50MB)</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative rounded-lg overflow-hidden border border-border">
+                        {isVideoFile ? (
+                          <video 
+                            src={mediaPreview} 
+                            className="w-full h-40 object-cover"
+                            controls
+                          />
+                        ) : (
+                          <img 
+                            src={mediaPreview} 
+                            alt="Preview" 
+                            className="w-full h-40 object-cover"
+                          />
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8"
+                          onClick={removeMedia}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm rounded px-2 py-1">
+                          {isVideoFile ? (
+                            <Video className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                          <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                            {mediaFile?.name}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={uploading}>
                     Cancel
                   </Button>
-                  <Button onClick={createCampaign}>
-                    Create Campaign
+                  <Button onClick={createCampaign} disabled={uploading}>
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Campaign'
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
