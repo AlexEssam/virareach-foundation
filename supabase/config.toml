@@ -71,3 +71,15 @@ verify_jwt = true
 
 [functions.b2b-extract]
 verify_jwt = true
+
+[functions.tiktok-extract]
+verify_jwt = true
+
+[functions.tiktok-follow]
+verify_jwt = true
+
+[functions.tiktok-send]
+verify_jwt = true
+
+[functions.tiktok-accounts]
+verify_jwt = true

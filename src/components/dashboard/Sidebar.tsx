@@ -24,7 +24,7 @@ import {
   FileText,
   Database
 } from "lucide-react";
-import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -44,6 +44,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [linkedinOpen, setLinkedinOpen] = useState(location.pathname.startsWith("/linkedin"));
   const [emailOpen, setEmailOpen] = useState(location.pathname.startsWith("/email"));
   const [b2bOpen, setB2bOpen] = useState(location.pathname.startsWith("/b2b"));
+  const [tiktokOpen, setTiktokOpen] = useState(location.pathname.startsWith("/tiktok"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,6 +60,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isLinkedinActive = location.pathname.startsWith("/linkedin");
   const isEmailActive = location.pathname.startsWith("/email");
   const isB2BActive = location.pathname.startsWith("/b2b");
+  const isTiktokActive = location.pathname.startsWith("/tiktok");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -114,6 +116,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
   const b2bMenuItems = [
     { icon: Database, label: "Data Center", path: "/b2b/data-center" },
+  ];
+
+  const tiktokMenuItems = [
+    { icon: Download, label: "Extractor", path: "/tiktok/extractor" },
+    { icon: UserPlus, label: "Follow/Unfollow", path: "/tiktok/follow" },
+    { icon: Send, label: "Messaging", path: "/tiktok/messaging" },
   ];
 
   return (
@@ -452,6 +460,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/b2b/data-center")}
           >
             <Database className="h-5 w-5 shrink-0 text-[#10B981]" />
+          </Button>
+        )}
+
+        {/* TikTok Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={tiktokOpen} onOpenChange={setTiktokOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isTiktokActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiTiktok className="h-5 w-5 shrink-0" />
+                  <span>TikTok Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${tiktokOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {tiktokMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isTiktokActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/tiktok/extractor")}
+          >
+            <SiTiktok className="h-5 w-5 shrink-0" />
           </Button>
         )}
       </nav>
