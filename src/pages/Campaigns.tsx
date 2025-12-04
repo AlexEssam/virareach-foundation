@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +34,8 @@ import {
   Upload,
   Image,
   Video,
-  X
+  X,
+  LogIn
 } from "lucide-react";
 import { SiPinterest, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { format } from "date-fns";
@@ -54,7 +56,8 @@ interface Campaign {
 }
 
 export default function Campaigns() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -71,10 +74,12 @@ export default function Campaigns() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       loadCampaigns();
+    } else if (!authLoading && !user) {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -325,6 +330,34 @@ export default function Campaigns() {
   };
 
   const isVideoFile = mediaFile?.type.startsWith('video/');
+
+  // Show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-md mx-auto mt-20 p-8">
+            <Card>
+              <CardHeader className="text-center">
+                <Target className="h-12 w-12 text-primary mx-auto mb-2" />
+                <CardTitle>Login Required</CardTitle>
+                <CardDescription>
+                  Please log in to access Campaigns
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Button onClick={() => navigate('/login')}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Go to Login
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
