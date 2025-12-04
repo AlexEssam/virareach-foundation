@@ -288,6 +288,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           </Button>
         )}
 
+        {/* TikTok Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={tiktokOpen} onOpenChange={setTiktokOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isTiktokActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiTiktok className="h-5 w-5 shrink-0" />
+                  <span>TikTok Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${tiktokOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {tiktokMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isTiktokActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/tiktok/extractor")}
+          >
+            <SiTiktok className="h-5 w-5 shrink-0" />
+          </Button>
+        )}
+
         {/* X (Twitter) Tools Section */}
         {!collapsed ? (
           <Collapsible open={xOpen} onOpenChange={setXOpen}>
@@ -480,45 +519,6 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/b2b/data-center")}
           >
             <Database className="h-5 w-5 shrink-0 text-[#10B981]" />
-          </Button>
-        )}
-
-        {/* TikTok Tools Section */}
-        {!collapsed ? (
-          <Collapsible open={tiktokOpen} onOpenChange={setTiktokOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                variant={isTiktokActive ? "glow" : "ghost"}
-                className="w-full justify-between gap-3"
-              >
-                <div className="flex items-center gap-3">
-                  <SiTiktok className="h-5 w-5 shrink-0" />
-                  <span>TikTok Tools</span>
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${tiktokOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4 pt-2 space-y-1">
-              {tiktokMenuItems.map((item) => (
-                <Button
-                  key={item.label}
-                  variant={isActive(item.path) ? "glow" : "ghost"}
-                  className="w-full justify-start gap-3 h-9 text-sm"
-                  onClick={() => navigate(item.path)}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </Button>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        ) : (
-          <Button
-            variant={isTiktokActive ? "glow" : "ghost"}
-            className="w-full justify-center px-3"
-            onClick={() => navigate("/tiktok/extractor")}
-          >
-            <SiTiktok className="h-5 w-5 shrink-0" />
           </Button>
         )}
       </nav>
