@@ -1,1 +1,16 @@
 project_id = "iepyngyowgdiendyoqnu"
+
+[functions.facebook-accounts]
+verify_jwt = true
+
+[functions.facebook-search]
+verify_jwt = true
+
+[functions.facebook-extract]
+verify_jwt = true
+
+[functions.facebook-publish]
+verify_jwt = true
+
+[functions.facebook-analyze]
+verify_jwt = true

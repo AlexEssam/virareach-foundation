@@ -14,6 +14,160 @@ export type Database = {
   }
   public: {
     Tables: {
+      facebook_accounts: {
+        Row: {
+          account_email: string | null
+          account_name: string
+          cookies: string | null
+          created_at: string
+          id: string
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_email?: string | null
+          account_name: string
+          cookies?: string | null
+          created_at?: string
+          id?: string
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_email?: string | null
+          account_name?: string
+          cookies?: string | null
+          created_at?: string
+          id?: string
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facebook_extractions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          result_count: number | null
+          results: Json | null
+          source_id: string | null
+          source_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source_id?: string | null
+          source_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source_id?: string | null
+          source_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facebook_publications: {
+        Row: {
+          account_id: string | null
+          content: string | null
+          created_at: string
+          failure_count: number | null
+          id: string
+          publication_type: string
+          status: string
+          success_count: number | null
+          target_ids: string[] | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          failure_count?: number | null
+          id?: string
+          publication_type: string
+          status?: string
+          success_count?: number | null
+          target_ids?: string[] | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          failure_count?: number | null
+          id?: string
+          publication_type?: string
+          status?: string
+          success_count?: number | null
+          target_ids?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_publications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "facebook_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facebook_publications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licenses: {
         Row: {
           activated_at: string | null
