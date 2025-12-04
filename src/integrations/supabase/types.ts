@@ -1043,6 +1043,404 @@ export type Database = {
           },
         ]
       }
+      pinterest_accounts: {
+        Row: {
+          account_name: string | null
+          boards_count: number | null
+          created_at: string
+          daily_dm_count: number | null
+          daily_follow_count: number | null
+          daily_pin_count: number | null
+          daily_unfollow_count: number | null
+          email: string | null
+          followers_count: number | null
+          following_count: number | null
+          id: string
+          last_action_at: string | null
+          pins_count: number | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          session_data: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          account_name?: string | null
+          boards_count?: number | null
+          created_at?: string
+          daily_dm_count?: number | null
+          daily_follow_count?: number | null
+          daily_pin_count?: number | null
+          daily_unfollow_count?: number | null
+          email?: string | null
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          pins_count?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          account_name?: string | null
+          boards_count?: number | null
+          created_at?: string
+          daily_dm_count?: number | null
+          daily_follow_count?: number | null
+          daily_pin_count?: number | null
+          daily_unfollow_count?: number | null
+          email?: string | null
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          pins_count?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinterest_boards: {
+        Row: {
+          account_id: string | null
+          board_id: string | null
+          board_name: string
+          board_url: string | null
+          category: string | null
+          created_at: string
+          description: string | null
+          followers_count: number | null
+          id: string
+          is_collaborative: boolean | null
+          pins_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          board_id?: string | null
+          board_name: string
+          board_url?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          followers_count?: number | null
+          id?: string
+          is_collaborative?: boolean | null
+          pins_count?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          board_id?: string | null
+          board_name?: string
+          board_url?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          followers_count?: number | null
+          id?: string
+          is_collaborative?: boolean | null
+          pins_count?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_boards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "pinterest_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinterest_boards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinterest_campaigns: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          campaign_type: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          max_interval: number | null
+          media_url: string | null
+          message_type: string
+          min_interval: number | null
+          recipients: string[] | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          media_url?: string | null
+          message_type?: string
+          min_interval?: number | null
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          media_url?: string | null
+          message_type?: string
+          min_interval?: number | null
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "pinterest_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinterest_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinterest_extractions: {
+        Row: {
+          analytics: Json | null
+          board_url: string | null
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          niche: string | null
+          result_count: number | null
+          results: Json | null
+          source_username: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          analytics?: Json | null
+          board_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source_username?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          analytics?: Json | null
+          board_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source_username?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinterest_follows: {
+        Row: {
+          account_id: string | null
+          action_type: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          status: string
+          target_username: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          action_type: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_username: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          action_type?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_username?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_follows_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "pinterest_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinterest_follows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinterest_posts: {
+        Row: {
+          account_id: string | null
+          board_id: string | null
+          created_at: string
+          description: string | null
+          destination_url: string | null
+          id: string
+          image_url: string | null
+          post_type: string
+          published_at: string | null
+          scheduled_at: string | null
+          source_pin_url: string | null
+          status: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          board_id?: string | null
+          created_at?: string
+          description?: string | null
+          destination_url?: string | null
+          id?: string
+          image_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          source_pin_url?: string | null
+          status?: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          board_id?: string | null
+          created_at?: string
+          description?: string | null
+          destination_url?: string | null
+          id?: string
+          image_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          source_pin_url?: string | null
+          status?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinterest_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "pinterest_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinterest_posts_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "pinterest_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinterest_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points: {
         Row: {
           balance: number
