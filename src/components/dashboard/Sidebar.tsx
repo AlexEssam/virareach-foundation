@@ -115,6 +115,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   ];
 
   const telegramMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/telegram/accounts" },
     { icon: Download, label: "Extractor", path: "/telegram/extractor" },
     { icon: Send, label: "Sender", path: "/telegram/sender" },
     { icon: Users, label: "Group Manager", path: "/telegram/groups" },
@@ -358,7 +359,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <Button
             variant={isTelegramActive ? "glow" : "ghost"}
             className="w-full justify-center px-3"
-            onClick={() => navigate("/telegram/extractor")}
+            onClick={() => navigate("/telegram/accounts")}
           >
             <SiTelegram className="h-5 w-5 shrink-0" color="#26A5E4" />
           </Button>
