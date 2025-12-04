@@ -123,6 +123,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   ];
 
   const linkedinMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/linkedin/accounts" },
     { icon: Download, label: "Extract Center", path: "/linkedin/extract" },
     { icon: Send, label: "Messaging Center", path: "/linkedin/messaging" },
     { icon: BarChart3, label: "Analysis", path: "/linkedin/analysis" },
@@ -398,7 +399,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <Button
             variant={isLinkedinActive ? "glow" : "ghost"}
             className="w-full justify-center px-3"
-            onClick={() => navigate("/linkedin/extract")}
+            onClick={() => navigate("/linkedin/accounts")}
           >
             <Linkedin className="h-5 w-5 shrink-0 text-[#0A66C2]" />
           </Button>

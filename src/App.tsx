@@ -43,6 +43,7 @@ import TelegramSender from "./pages/telegram/TelegramSender";
 import TelegramGroups from "./pages/telegram/TelegramGroups";
 import TelegramGroupMarketing from "./pages/telegram/TelegramGroupMarketing";
 import TelegramAccountManager from "./pages/telegram/TelegramAccountManager";
+import LinkedInAccountManager from "./pages/linkedin/LinkedInAccountManager";
 import LinkedInExtract from "./pages/linkedin/LinkedInExtract";
 import LinkedInMessaging from "./pages/linkedin/LinkedInMessaging";
 import LinkedInAnalysis from "./pages/linkedin/LinkedInAnalysis";
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/telegram/sender" element={<TelegramSender />} />
             <Route path="/telegram/groups" element={<TelegramGroups />} />
             <Route path="/telegram/marketing" element={<TelegramGroupMarketing />} />
+            <Route path="/linkedin/accounts" element={<LinkedInAccountManager />} />
             <Route path="/linkedin/extract" element={<LinkedInExtract />} />
             <Route path="/linkedin/messaging" element={<LinkedInMessaging />} />
             <Route path="/linkedin/analysis" element={<LinkedInAnalysis />} />
