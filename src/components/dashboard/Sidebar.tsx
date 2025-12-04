@@ -19,7 +19,9 @@ import {
   UserPlus,
   TrendingUp,
   Heart,
-  Linkedin
+  Linkedin,
+  Mail,
+  FileText
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -39,6 +41,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [xOpen, setXOpen] = useState(location.pathname.startsWith("/x"));
   const [telegramOpen, setTelegramOpen] = useState(location.pathname.startsWith("/telegram"));
   const [linkedinOpen, setLinkedinOpen] = useState(location.pathname.startsWith("/linkedin"));
+  const [emailOpen, setEmailOpen] = useState(location.pathname.startsWith("/email"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -52,6 +55,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isXActive = location.pathname.startsWith("/x");
   const isTelegramActive = location.pathname.startsWith("/telegram");
   const isLinkedinActive = location.pathname.startsWith("/linkedin");
+  const isEmailActive = location.pathname.startsWith("/email");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -98,6 +102,11 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extract Center", path: "/linkedin/extract" },
     { icon: Send, label: "Messaging Center", path: "/linkedin/messaging" },
     { icon: BarChart3, label: "Analysis", path: "/linkedin/analysis" },
+  ];
+
+  const emailMenuItems = [
+    { icon: Send, label: "Campaigns", path: "/email/campaigns" },
+    { icon: FileText, label: "Templates", path: "/email/templates" },
   ];
 
   return (
@@ -358,6 +367,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/linkedin/extract")}
           >
             <Linkedin className="h-5 w-5 shrink-0 text-[#0A66C2]" />
+          </Button>
+        )}
+
+        {/* Email Marketing Section */}
+        {!collapsed ? (
+          <Collapsible open={emailOpen} onOpenChange={setEmailOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isEmailActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 shrink-0 text-[#EA4335]" />
+                  <span>Email Marketing</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${emailOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {emailMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isEmailActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/email/campaigns")}
+          >
+            <Mail className="h-5 w-5 shrink-0 text-[#EA4335]" />
           </Button>
         )}
       </nav>
