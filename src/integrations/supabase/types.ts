@@ -2141,6 +2141,45 @@ export type Database = {
           },
         ]
       }
+      scheduled_posts: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          media_url: string | null
+          platform: string
+          post_type: string | null
+          scheduled_at: string
+          status: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          media_url?: string | null
+          platform: string
+          post_type?: string | null
+          scheduled_at: string
+          status?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          media_url?: string | null
+          platform?: string
+          post_type?: string | null
+          scheduled_at?: string
+          status?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       snapchat_accounts: {
         Row: {
           account_name: string | null
