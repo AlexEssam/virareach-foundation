@@ -26,7 +26,7 @@ import {
   Smartphone,
   AtSign
 } from "lucide-react";
-import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -47,6 +47,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [emailOpen, setEmailOpen] = useState(location.pathname.startsWith("/email"));
   const [b2bOpen, setB2bOpen] = useState(location.pathname.startsWith("/b2b"));
   const [tiktokOpen, setTiktokOpen] = useState(location.pathname.startsWith("/tiktok"));
+  const [pinterestOpen, setPinterestOpen] = useState(location.pathname.startsWith("/pinterest"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -63,6 +64,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isEmailActive = location.pathname.startsWith("/email");
   const isB2BActive = location.pathname.startsWith("/b2b");
   const isTiktokActive = location.pathname.startsWith("/tiktok");
+  const isPinterestActive = location.pathname.startsWith("/pinterest");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -144,6 +146,15 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: UserPlus, label: "Follow/Unfollow", path: "/tiktok/follow" },
     { icon: AtSign, label: "Mentions", path: "/tiktok/mentions" },
     { icon: Send, label: "Messaging", path: "/tiktok/messaging" },
+  ];
+
+  const pinterestMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/pinterest/accounts" },
+    { icon: Download, label: "Extractor", path: "/pinterest/extractor" },
+    { icon: UserPlus, label: "Follow/Unfollow", path: "/pinterest/follow" },
+    { icon: Send, label: "Messaging", path: "/pinterest/messaging" },
+    { icon: TrendingUp, label: "Publisher", path: "/pinterest/publisher" },
+    { icon: BarChart3, label: "Boards", path: "/pinterest/boards" },
   ];
 
   return (

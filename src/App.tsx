@@ -55,6 +55,12 @@ import TikTokExtractor from "./pages/tiktok/TikTokExtractor";
 import TikTokFollow from "./pages/tiktok/TikTokFollow";
 import TikTokMentions from "./pages/tiktok/TikTokMentions";
 import TikTokMessaging from "./pages/tiktok/TikTokMessaging";
+import PinterestAccounts from "./pages/pinterest/PinterestAccounts";
+import PinterestExtractor from "./pages/pinterest/PinterestExtractor";
+import PinterestMessaging from "./pages/pinterest/PinterestMessaging";
+import PinterestFollow from "./pages/pinterest/PinterestFollow";
+import PinterestPublisher from "./pages/pinterest/PinterestPublisher";
+import PinterestBoards from "./pages/pinterest/PinterestBoards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -118,6 +124,12 @@ const App = () => (
             <Route path="/tiktok/follow" element={<TikTokFollow />} />
             <Route path="/tiktok/mentions" element={<TikTokMentions />} />
             <Route path="/tiktok/messaging" element={<TikTokMessaging />} />
+            <Route path="/pinterest/accounts" element={<PinterestAccounts />} />
+            <Route path="/pinterest/extractor" element={<PinterestExtractor />} />
+            <Route path="/pinterest/messaging" element={<PinterestMessaging />} />
+            <Route path="/pinterest/follow" element={<PinterestFollow />} />
+            <Route path="/pinterest/publisher" element={<PinterestPublisher />} />
+            <Route path="/pinterest/boards" element={<PinterestBoards />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
