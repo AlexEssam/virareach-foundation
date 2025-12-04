@@ -18,6 +18,10 @@ import FacebookGroups from "./pages/facebook/FacebookGroups";
 import WhatsAppSending from "./pages/whatsapp/WhatsAppSending";
 import WhatsAppExtractor from "./pages/whatsapp/WhatsAppExtractor";
 import WhatsAppGroups from "./pages/whatsapp/WhatsAppGroups";
+import WhatsAppContacts from "./pages/whatsapp/WhatsAppContacts";
+import WhatsAppAutoReply from "./pages/whatsapp/WhatsAppAutoReply";
+import WhatsAppScheduler from "./pages/whatsapp/WhatsAppScheduler";
+import WhatsAppDiscover from "./pages/whatsapp/WhatsAppDiscover";
 import InstagramAccounts from "./pages/instagram/InstagramAccounts";
 import InstagramExtractor from "./pages/instagram/InstagramExtractor";
 import InstagramFollow from "./pages/instagram/InstagramFollow";
@@ -64,6 +68,10 @@ const App = () => (
             <Route path="/whatsapp/sending" element={<WhatsAppSending />} />
             <Route path="/whatsapp/extractor" element={<WhatsAppExtractor />} />
             <Route path="/whatsapp/groups" element={<WhatsAppGroups />} />
+            <Route path="/whatsapp/contacts" element={<WhatsAppContacts />} />
+            <Route path="/whatsapp/autoreply" element={<WhatsAppAutoReply />} />
+            <Route path="/whatsapp/scheduler" element={<WhatsAppScheduler />} />
+            <Route path="/whatsapp/discover" element={<WhatsAppDiscover />} />
             <Route path="/instagram/accounts" element={<InstagramAccounts />} />
             <Route path="/instagram/extractor" element={<InstagramExtractor />} />
             <Route path="/instagram/follow" element={<InstagramFollow />} />

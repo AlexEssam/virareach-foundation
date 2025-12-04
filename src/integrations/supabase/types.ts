@@ -1711,6 +1711,66 @@ export type Database = {
           },
         ]
       }
+      whatsapp_auto_replies: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          response_content: string
+          response_media_url: string | null
+          trigger_count: number | null
+          trigger_keywords: string[] | null
+          trigger_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          response_content: string
+          response_media_url?: string | null
+          trigger_count?: number | null
+          trigger_keywords?: string[] | null
+          trigger_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          response_content?: string
+          response_media_url?: string | null
+          trigger_count?: number | null
+          trigger_keywords?: string[] | null
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_auto_replies_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_auto_replies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_campaigns: {
         Row: {
           account_id: string | null
@@ -1776,6 +1836,106 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          last_messaged_at: string | null
+          message_count: number | null
+          name: string | null
+          notes: string | null
+          phone_number: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_messaged_at?: string | null
+          message_count?: number | null
+          name?: string | null
+          notes?: string | null
+          phone_number: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_messaged_at?: string | null
+          message_count?: number | null
+          name?: string | null
+          notes?: string | null
+          phone_number?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_discovered_groups: {
+        Row: {
+          category: string | null
+          description: string | null
+          discovered_at: string
+          group_name: string | null
+          id: string
+          invite_link: string
+          joined_at: string | null
+          member_estimate: number | null
+          source_platform: string
+          source_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          discovered_at?: string
+          group_name?: string | null
+          id?: string
+          invite_link: string
+          joined_at?: string | null
+          member_estimate?: number | null
+          source_platform: string
+          source_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          discovered_at?: string
+          group_name?: string | null
+          id?: string
+          invite_link?: string
+          joined_at?: string | null
+          member_estimate?: number | null
+          source_platform?: string
+          source_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_discovered_groups_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1871,6 +2031,75 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_groups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_scheduled: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          content: string | null
+          created_at: string
+          executed_at: string | null
+          failed_count: number | null
+          id: string
+          media_url: string | null
+          message_type: string
+          recipients: string[] | null
+          scheduled_at: string
+          sending_mode: string
+          sent_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          content?: string | null
+          created_at?: string
+          executed_at?: string | null
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipients?: string[] | null
+          scheduled_at: string
+          sending_mode?: string
+          sent_count?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          content?: string | null
+          created_at?: string
+          executed_at?: string | null
+          failed_count?: number | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipients?: string[] | null
+          scheduled_at?: string
+          sending_mode?: string
+          sent_count?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_scheduled_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_scheduled_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
