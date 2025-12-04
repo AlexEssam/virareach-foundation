@@ -26,6 +26,9 @@ import XTrends from "./pages/x/XTrends";
 import TelegramExtractor from "./pages/telegram/TelegramExtractor";
 import TelegramSender from "./pages/telegram/TelegramSender";
 import TelegramGroups from "./pages/telegram/TelegramGroups";
+import LinkedInExtract from "./pages/linkedin/LinkedInExtract";
+import LinkedInMessaging from "./pages/linkedin/LinkedInMessaging";
+import LinkedInAnalysis from "./pages/linkedin/LinkedInAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +63,9 @@ const App = () => (
             <Route path="/telegram/extractor" element={<TelegramExtractor />} />
             <Route path="/telegram/sender" element={<TelegramSender />} />
             <Route path="/telegram/groups" element={<TelegramGroups />} />
+            <Route path="/linkedin/extract" element={<LinkedInExtract />} />
+            <Route path="/linkedin/messaging" element={<LinkedInMessaging />} />
+            <Route path="/linkedin/analysis" element={<LinkedInAnalysis />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

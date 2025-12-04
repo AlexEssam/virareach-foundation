@@ -18,7 +18,8 @@ import {
   BarChart3,
   UserPlus,
   TrendingUp,
-  Heart
+  Heart,
+  Linkedin
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -37,6 +38,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [instagramOpen, setInstagramOpen] = useState(location.pathname.startsWith("/instagram"));
   const [xOpen, setXOpen] = useState(location.pathname.startsWith("/x"));
   const [telegramOpen, setTelegramOpen] = useState(location.pathname.startsWith("/telegram"));
+  const [linkedinOpen, setLinkedinOpen] = useState(location.pathname.startsWith("/linkedin"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -49,6 +51,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isInstagramActive = location.pathname.startsWith("/instagram");
   const isXActive = location.pathname.startsWith("/x");
   const isTelegramActive = location.pathname.startsWith("/telegram");
+  const isLinkedinActive = location.pathname.startsWith("/linkedin");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -89,6 +92,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/telegram/extractor" },
     { icon: Send, label: "Sender", path: "/telegram/sender" },
     { icon: Users, label: "Group Manager", path: "/telegram/groups" },
+  ];
+
+  const linkedinMenuItems = [
+    { icon: Download, label: "Extract Center", path: "/linkedin/extract" },
+    { icon: Send, label: "Messaging Center", path: "/linkedin/messaging" },
+    { icon: BarChart3, label: "Analysis", path: "/linkedin/analysis" },
   ];
 
   return (
@@ -310,6 +319,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/telegram/extractor")}
           >
             <SiTelegram className="h-5 w-5 shrink-0" color="#26A5E4" />
+          </Button>
+        )}
+
+        {/* LinkedIn Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={linkedinOpen} onOpenChange={setLinkedinOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isLinkedinActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Linkedin className="h-5 w-5 shrink-0 text-[#0A66C2]" />
+                  <span>LinkedIn Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${linkedinOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {linkedinMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isLinkedinActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/linkedin/extract")}
+          >
+            <Linkedin className="h-5 w-5 shrink-0 text-[#0A66C2]" />
           </Button>
         )}
       </nav>
