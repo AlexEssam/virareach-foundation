@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,9 +125,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <Card variant="glass" className="w-full max-w-md animate-scale-in">
       <CardHeader className="text-center space-y-4">
-        <div className="flex justify-center">
+        <Link to="/" className="flex justify-center hover:opacity-80 transition-opacity">
           <Logo size="lg" />
-        </div>
+        </Link>
         <div>
           <CardTitle className="text-2xl">
             {mode === "login" ? "Welcome Back" : "Create Account"}
