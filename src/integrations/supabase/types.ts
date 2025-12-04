@@ -1893,6 +1893,263 @@ export type Database = {
           },
         ]
       }
+      snapchat_accounts: {
+        Row: {
+          account_name: string | null
+          created_at: string
+          daily_message_count: number | null
+          email: string | null
+          friends_count: number | null
+          id: string
+          last_action_at: string | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          session_data: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          account_name?: string | null
+          created_at?: string
+          daily_message_count?: number | null
+          email?: string | null
+          friends_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          account_name?: string | null
+          created_at?: string
+          daily_message_count?: number | null
+          email?: string | null
+          friends_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapchat_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snapchat_campaigns: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          max_interval: number | null
+          media_url: string | null
+          message_type: string
+          min_interval: number | null
+          recipients: string[] | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          total_recipients: number | null
+          user_id: string
+          whatsapp_link: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          media_url?: string | null
+          message_type?: string
+          min_interval?: number | null
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id: string
+          whatsapp_link?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          media_url?: string | null
+          message_type?: string
+          min_interval?: number | null
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id?: string
+          whatsapp_link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapchat_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "snapchat_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "snapchat_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snapchat_extractions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          niche: string | null
+          result_count: number | null
+          results: Json | null
+          source: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapchat_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snapchat_messages: {
+        Row: {
+          account_id: string | null
+          campaign_id: string | null
+          content: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          recipient_username: string
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_id?: string | null
+          content?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipient_username: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_id?: string | null
+          content?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          recipient_username?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapchat_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "snapchat_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "snapchat_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "snapchat_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "snapchat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_accounts: {
         Row: {
           account_name: string | null

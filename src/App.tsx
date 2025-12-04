@@ -65,6 +65,9 @@ import RedditAccounts from "./pages/reddit/RedditAccounts";
 import RedditCommunities from "./pages/reddit/RedditCommunities";
 import RedditUpvotes from "./pages/reddit/RedditUpvotes";
 import RedditPublisher from "./pages/reddit/RedditPublisher";
+import SnapchatAccounts from "./pages/snapchat/SnapchatAccounts";
+import SnapchatExtractor from "./pages/snapchat/SnapchatExtractor";
+import SnapchatMessaging from "./pages/snapchat/SnapchatMessaging";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -138,6 +141,9 @@ const App = () => (
             <Route path="/reddit/communities" element={<RedditCommunities />} />
             <Route path="/reddit/upvotes" element={<RedditUpvotes />} />
             <Route path="/reddit/publisher" element={<RedditPublisher />} />
+            <Route path="/snapchat/accounts" element={<SnapchatAccounts />} />
+            <Route path="/snapchat/extractor" element={<SnapchatExtractor />} />
+            <Route path="/snapchat/messaging" element={<SnapchatMessaging />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
