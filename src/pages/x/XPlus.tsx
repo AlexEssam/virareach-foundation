@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,19 +9,59 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Brain, Activity, Tag, MessageCircle, TrendingUp, Users, 
-  AtSign, Sparkles, Play, Loader2, BarChart3, Zap
+  AtSign, Sparkles, Play, Loader2, BarChart3, Zap, Globe,
+  Coins, Key, Settings, CheckCircle, XCircle, Plus, Trash2
 } from "lucide-react";
 import { SiX } from "@icons-pack/react-simple-icons";
+
+interface SiteCampaign {
+  id: string;
+  name: string;
+  url: string;
+  status: 'active' | 'paused' | 'completed';
+  visits: number;
+  conversions: number;
+  created_at: string;
+}
+
+interface UserSettings {
+  notifications: boolean;
+  autoBackup: boolean;
+  darkMode: boolean;
+  language: string;
+}
 
 export default function XPlus() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Points & License state
+  const [points, setPoints] = useState<number>(0);
+  const [license, setLicense] = useState<any>(null);
+  const [licenseKey, setLicenseKey] = useState("");
+  const [licenseLoading, setLicenseLoading] = useState(false);
+
+  // Sites Campaigns state
+  const [campaigns, setCampaigns] = useState<SiteCampaign[]>([]);
+  const [newCampaign, setNewCampaign] = useState({ name: "", url: "" });
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+
+  // Settings state
+  const [settings, setSettings] = useState<UserSettings>({
+    notifications: true,
+    autoBackup: true,
+    darkMode: false,
+    language: "en"
+  });
 
   const [activityForm, setActivityForm] = useState({ account_username: "" });
   const [tagForm, setTagForm] = useState({ comments: "", keywords: "" });
@@ -29,6 +69,137 @@ export default function XPlus() {
   const [trendForm, setTrendForm] = useState({ topic: "", volume: "1000", style: "casual" });
   const [demoForm, setDemoForm] = useState({ users_data: "" });
   const [mentionForm, setMentionForm] = useState({ context: "", users: "", goal: "" });
+
+  // Fetch user data on mount
+  useEffect(() => {
+    if (user) {
+      fetchUserData();
+    }
+  }, [user]);
+
+  const fetchUserData = async () => {
+    if (!user) return;
+
+    // Fetch points
+    const { data: pointsData } = await supabase
+      .from("points")
+      .select("balance")
+      .eq("user_id", user.id)
+      .single();
+    if (pointsData) setPoints(pointsData.balance);
+
+    // Fetch license
+    const { data: licenseData } = await supabase
+      .from("licenses")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .single();
+    if (licenseData) setLicense(licenseData);
+
+    // Load saved settings from localStorage
+    const savedSettings = localStorage.getItem("virareach_settings");
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
+
+    // Load campaigns from localStorage (simulated)
+    const savedCampaigns = localStorage.getItem("virareach_campaigns");
+    if (savedCampaigns) {
+      setCampaigns(JSON.parse(savedCampaigns));
+    }
+  };
+
+  const activateLicense = async () => {
+    if (!licenseKey.trim() || !user) {
+      toast({ title: "Error", description: "Please enter a license key", variant: "destructive" });
+      return;
+    }
+
+    setLicenseLoading(true);
+    try {
+      const { data: licenseData, error: findError } = await supabase
+        .from("licenses")
+        .select("*")
+        .eq("license_key", licenseKey.trim())
+        .single();
+
+      if (findError || !licenseData) {
+        toast({ title: "Invalid License", description: "License key not found", variant: "destructive" });
+        return;
+      }
+
+      if (licenseData.status === "active" && licenseData.user_id !== user.id) {
+        toast({ title: "Already Active", description: "This license is already in use", variant: "destructive" });
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("licenses")
+        .update({
+          user_id: user.id,
+          status: "active" as const,
+          activated_at: new Date().toISOString(),
+          device_fingerprint: navigator.userAgent,
+        })
+        .eq("id", licenseData.id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Success", description: "License activated successfully" });
+      setLicenseKey("");
+      fetchUserData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLicenseLoading(false);
+    }
+  };
+
+  const addCampaign = () => {
+    if (!newCampaign.name || !newCampaign.url) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    const campaign: SiteCampaign = {
+      id: crypto.randomUUID(),
+      name: newCampaign.name,
+      url: newCampaign.url,
+      status: "active",
+      visits: 0,
+      conversions: 0,
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = [...campaigns, campaign];
+    setCampaigns(updated);
+    localStorage.setItem("virareach_campaigns", JSON.stringify(updated));
+    setNewCampaign({ name: "", url: "" });
+    toast({ title: "Campaign Created", description: "New campaign added successfully" });
+  };
+
+  const toggleCampaignStatus = (id: string) => {
+    const updated = campaigns.map(c => 
+      c.id === id ? { ...c, status: c.status === "active" ? "paused" as const : "active" as const } : c
+    );
+    setCampaigns(updated);
+    localStorage.setItem("virareach_campaigns", JSON.stringify(updated));
+  };
+
+  const deleteCampaign = (id: string) => {
+    const updated = campaigns.filter(c => c.id !== id);
+    setCampaigns(updated);
+    localStorage.setItem("virareach_campaigns", JSON.stringify(updated));
+    toast({ title: "Deleted", description: "Campaign removed" });
+  };
+
+  const updateSettings = (key: keyof UserSettings, value: any) => {
+    const updated = { ...settings, [key]: value };
+    setSettings(updated);
+    localStorage.setItem("virareach_settings", JSON.stringify(updated));
+    toast({ title: "Settings Updated", description: `${key} setting changed` });
+  };
 
   const callAI = async (action: string, params: any) => {
     setLoading(true);
@@ -164,8 +335,24 @@ export default function XPlus() {
             </Card>
           </div>
 
-          <Tabs defaultValue="activity">
-            <TabsList className="grid grid-cols-6 h-auto">
+          <Tabs defaultValue="campaigns">
+            <TabsList className="grid grid-cols-5 md:grid-cols-10 h-auto gap-1">
+              <TabsTrigger value="campaigns" className="text-xs">
+                <Globe className="h-3 w-3 mr-1" />
+                Sites
+              </TabsTrigger>
+              <TabsTrigger value="points" className="text-xs">
+                <Coins className="h-3 w-3 mr-1" />
+                Points
+              </TabsTrigger>
+              <TabsTrigger value="license" className="text-xs">
+                <Key className="h-3 w-3 mr-1" />
+                License
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs">
+                <Settings className="h-3 w-3 mr-1" />
+                Settings
+              </TabsTrigger>
               <TabsTrigger value="activity" className="text-xs">
                 <Activity className="h-3 w-3 mr-1" />
                 Monitor
@@ -191,6 +378,293 @@ export default function XPlus() {
                 Mention
               </TabsTrigger>
             </TabsList>
+
+            {/* Sites Campaigns Tab */}
+            <TabsContent value="campaigns">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Create New Campaign
+                    </CardTitle>
+                    <CardDescription>Add a new site campaign to track</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label>Campaign Name</Label>
+                        <Input
+                          value={newCampaign.name}
+                          onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                          placeholder="My Campaign"
+                        />
+                      </div>
+                      <div>
+                        <Label>Target URL</Label>
+                        <Input
+                          value={newCampaign.url}
+                          onChange={(e) => setNewCampaign({ ...newCampaign, url: e.target.value })}
+                          placeholder="https://example.com"
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={addCampaign}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Campaign
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Active Campaigns</CardTitle>
+                    <CardDescription>{campaigns.length} campaigns total</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {campaigns.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No campaigns yet. Create one above.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {campaigns.map((campaign) => (
+                          <div key={campaign.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                            <div className="flex-1">
+                              <h4 className="font-medium">{campaign.name}</h4>
+                              <p className="text-sm text-muted-foreground">{campaign.url}</p>
+                              <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                                <span>Visits: {campaign.visits}</span>
+                                <span>Conversions: {campaign.conversions}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={campaign.status === "active" ? "default" : "secondary"}>
+                                {campaign.status}
+                              </Badge>
+                              <Button size="sm" variant="outline" onClick={() => toggleCampaignStatus(campaign.id)}>
+                                {campaign.status === "active" ? "Pause" : "Resume"}
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => deleteCampaign(campaign.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Points Tab */}
+            <TabsContent value="points">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Coins className="h-5 w-5 text-primary" />
+                      Points Balance
+                    </CardTitle>
+                    <CardDescription>Your current ViraReach points</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-5xl font-bold text-primary">{points.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground mt-2">Points can be used for premium features</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Points Usage</CardTitle>
+                    <CardDescription>How points are consumed</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span>AI Analysis</span>
+                      <Badge variant="outline">10 pts/request</Badge>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span>Data Extraction</span>
+                      <Badge variant="outline">5 pts/100 records</Badge>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span>Bulk Messaging</span>
+                      <Badge variant="outline">1 pt/message</Badge>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span>Campaign Creation</span>
+                      <Badge variant="outline">20 pts/campaign</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* License Tab */}
+            <TabsContent value="license">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                          <Key className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle>License Status</CardTitle>
+                          <CardDescription>Manage your ViraReach license</CardDescription>
+                        </div>
+                      </div>
+                      {license ? (
+                        <Badge className="bg-primary/20 text-primary border border-primary/30">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-destructive/50 text-destructive">No License</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {license ? (
+                      <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">License Active</p>
+                          <p className="text-sm text-muted-foreground">
+                            Key: {license.license_key.slice(0, 8)}...{license.license_key.slice(-4)}
+                          </p>
+                          {license.expires_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Expires: {new Date(license.expires_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+                          <XCircle className="h-5 w-5 text-destructive" />
+                          <p className="text-sm">No active license. Enter your license key to activate.</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Enter license key..."
+                            value={licenseKey}
+                            onChange={(e) => setLicenseKey(e.target.value)}
+                            disabled={licenseLoading}
+                          />
+                          <Button onClick={activateLicense} disabled={licenseLoading}>
+                            {licenseLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Activate
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>License Benefits</CardTitle>
+                    <CardDescription>Features unlocked with an active license</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      "Unlimited AI features",
+                      "Priority support",
+                      "Advanced analytics",
+                      "Bulk operations",
+                      "API access",
+                      "Custom integrations"
+                    ].map((benefit, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <CheckCircle className={`h-4 w-4 ${license ? "text-primary" : "text-muted-foreground"}`} />
+                        <span className={license ? "" : "text-muted-foreground"}>{benefit}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      General Settings
+                    </CardTitle>
+                    <CardDescription>Configure your preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Push Notifications</p>
+                        <p className="text-sm text-muted-foreground">Receive alerts for campaigns</p>
+                      </div>
+                      <Switch
+                        checked={settings.notifications}
+                        onCheckedChange={(v) => updateSettings("notifications", v)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Auto Backup</p>
+                        <p className="text-sm text-muted-foreground">Automatically backup data</p>
+                      </div>
+                      <Switch
+                        checked={settings.autoBackup}
+                        onCheckedChange={(v) => updateSettings("autoBackup", v)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Dark Mode</p>
+                        <p className="text-sm text-muted-foreground">Toggle dark theme</p>
+                      </div>
+                      <Switch
+                        checked={settings.darkMode}
+                        onCheckedChange={(v) => updateSettings("darkMode", v)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Language & Region</CardTitle>
+                    <CardDescription>Localization settings</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Language</Label>
+                      <Select 
+                        value={settings.language} 
+                        onValueChange={(v) => updateSettings("language", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="ar">العربية</SelectItem>
+                          <SelectItem value="fr">Français</SelectItem>
+                          <SelectItem value="es">Español</SelectItem>
+                          <SelectItem value="de">Deutsch</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-muted-foreground mb-3">Account Info</p>
+                      <p className="text-sm">Email: {user?.email || "Not logged in"}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        ID: {user?.id?.slice(0, 8)}...
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
             <TabsContent value="activity">
               <div className="grid gap-6 md:grid-cols-2">
