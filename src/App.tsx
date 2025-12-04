@@ -8,6 +8,10 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import FacebookAccounts from "./pages/facebook/FacebookAccounts";
+import FacebookExtractor from "./pages/facebook/FacebookExtractor";
+import FacebookPublisher from "./pages/facebook/FacebookPublisher";
+import FacebookGroupAnalyzer from "./pages/facebook/FacebookGroupAnalyzer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +28,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/facebook/accounts" element={<FacebookAccounts />} />
+            <Route path="/facebook/extractor" element={<FacebookExtractor />} />
+            <Route path="/facebook/publisher" element={<FacebookPublisher />} />
+            <Route path="/facebook/analyzer" element={<FacebookGroupAnalyzer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
