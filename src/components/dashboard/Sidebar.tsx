@@ -79,12 +79,15 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isVkActive = location.pathname.startsWith("/vk");
   const isGoogleMapsActive = location.pathname.startsWith("/googlemaps");
 
-  const mainMenuItems = [
+  const topMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Image, label: "AI Image", path: "/ai/image" },
     { icon: Video, label: "AI Video", path: "/ai/video" },
     { icon: Type, label: "Text Tools", path: "/ai/text" },
     { icon: Volume2, label: "Audio Tools", path: "/ai/audio" },
+  ];
+
+  const bottomMenuItems = [
     { icon: MessageSquare, label: "Campaigns", path: "/campaigns" },
     { icon: Coins, label: "Points", path: "/points" },
     { icon: Key, label: "License", path: "/license" },
@@ -214,7 +217,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {mainMenuItems.map((item) => (
+        {topMenuItems.map((item) => (
           <Button
             key={item.label}
             variant={isActive(item.path) ? "glow" : "ghost"}
@@ -771,6 +774,21 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             <MapPin className="h-5 w-5 shrink-0 text-[#EA4335]" />
           </Button>
         )}
+
+        {/* Bottom Menu Items */}
+        <div className="pt-4 mt-4 border-t border-border/50">
+          {bottomMenuItems.map((item) => (
+            <Button
+              key={item.label}
+              variant={isActive(item.path) ? "glow" : "ghost"}
+              className={`w-full justify-start gap-3 ${collapsed ? 'px-3' : ''}`}
+              onClick={() => navigate(item.path)}
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </Button>
+          ))}
+        </div>
       </nav>
 
       <div className="p-4 border-t border-border/50">
