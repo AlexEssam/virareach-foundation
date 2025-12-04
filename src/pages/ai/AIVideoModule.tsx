@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Video, 
   Wand2, 
@@ -17,10 +19,13 @@ import {
   ZoomIn,
   Download,
   Loader2,
-  Image
+  Image,
+  LogIn
 } from "lucide-react";
 
 export default function AIVideoModule() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     video_url?: string;
@@ -89,6 +94,34 @@ export default function AIVideoModule() {
     { id: 'morph', name: 'Morph' },
     { id: 'pulse', name: 'Pulse' },
   ];
+
+  // Show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="max-w-md mx-auto mt-20">
+            <Card>
+              <CardHeader className="text-center">
+                <Video className="h-12 w-12 text-primary mx-auto mb-2" />
+                <CardTitle>Login Required</CardTitle>
+                <CardDescription>
+                  Please log in to access AI Video features
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Button onClick={() => navigate('/login')}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Go to Login
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
