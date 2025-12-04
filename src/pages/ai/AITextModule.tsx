@@ -15,6 +15,7 @@ export default function AITextModule() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
+  const [activeTab, setActiveTab] = useState("writer");
 
   // AI Writer state
   const [writerTopic, setWriterTopic] = useState("");
@@ -106,9 +107,12 @@ export default function AITextModule() {
             <p className="text-muted-foreground">Generate high-quality content with AI-powered writing tools</p>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - Clickable */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="glass">
+            <Card 
+              className={`glass cursor-pointer transition-all hover:scale-105 ${activeTab === 'writer' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setActiveTab('writer')}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <FileText className="h-8 w-8 text-blue-400" />
                 <div>
@@ -117,7 +121,10 @@ export default function AITextModule() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="glass">
+            <Card 
+              className={`glass cursor-pointer transition-all hover:scale-105 ${activeTab === 'post' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setActiveTab('post')}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <PenTool className="h-8 w-8 text-pink-400" />
                 <div>
@@ -126,7 +133,10 @@ export default function AITextModule() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="glass">
+            <Card 
+              className={`glass cursor-pointer transition-all hover:scale-105 ${activeTab === 'ad' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setActiveTab('ad')}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <Megaphone className="h-8 w-8 text-yellow-400" />
                 <div>
@@ -135,7 +145,10 @@ export default function AITextModule() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="glass">
+            <Card 
+              className={`glass cursor-pointer transition-all hover:scale-105 ${activeTab === 'script' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setActiveTab('script')}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <Video className="h-8 w-8 text-green-400" />
                 <div>
@@ -154,7 +167,7 @@ export default function AITextModule() {
                 <CardDescription>Choose a tool and provide your inputs</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="writer" className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="writer">Writer</TabsTrigger>
                     <TabsTrigger value="post">Post</TabsTrigger>
