@@ -21,7 +21,8 @@ import {
   Heart,
   Linkedin,
   Mail,
-  FileText
+  FileText,
+  Database
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -42,6 +43,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [telegramOpen, setTelegramOpen] = useState(location.pathname.startsWith("/telegram"));
   const [linkedinOpen, setLinkedinOpen] = useState(location.pathname.startsWith("/linkedin"));
   const [emailOpen, setEmailOpen] = useState(location.pathname.startsWith("/email"));
+  const [b2bOpen, setB2bOpen] = useState(location.pathname.startsWith("/b2b"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,6 +58,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isTelegramActive = location.pathname.startsWith("/telegram");
   const isLinkedinActive = location.pathname.startsWith("/linkedin");
   const isEmailActive = location.pathname.startsWith("/email");
+  const isB2BActive = location.pathname.startsWith("/b2b");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -107,6 +110,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const emailMenuItems = [
     { icon: Send, label: "Campaigns", path: "/email/campaigns" },
     { icon: FileText, label: "Templates", path: "/email/templates" },
+  ];
+
+  const b2bMenuItems = [
+    { icon: Database, label: "Data Center", path: "/b2b/data-center" },
   ];
 
   return (
@@ -406,6 +413,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/email/campaigns")}
           >
             <Mail className="h-5 w-5 shrink-0 text-[#EA4335]" />
+          </Button>
+        )}
+
+        {/* B2B Data Center Section */}
+        {!collapsed ? (
+          <Collapsible open={b2bOpen} onOpenChange={setB2bOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isB2BActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Database className="h-5 w-5 shrink-0 text-[#10B981]" />
+                  <span>B2B Data Center</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${b2bOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {b2bMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isB2BActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/b2b/data-center")}
+          >
+            <Database className="h-5 w-5 shrink-0 text-[#10B981]" />
           </Button>
         )}
       </nav>

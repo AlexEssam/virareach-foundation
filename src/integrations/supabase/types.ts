@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      b2b_extractions: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          extraction_name: string
+          filters: Json | null
+          id: string
+          location: string | null
+          result_count: number | null
+          results: Json | null
+          search_query: string | null
+          source: string
+          source_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_name: string
+          filters?: Json | null
+          id?: string
+          location?: string | null
+          result_count?: number | null
+          results?: Json | null
+          search_query?: string | null
+          source: string
+          source_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_name?: string
+          filters?: Json | null
+          id?: string
+          location?: string | null
+          result_count?: number | null
+          results?: Json | null
+          search_query?: string | null
+          source?: string
+          source_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_campaigns: {
         Row: {
           anti_spam_settings: Json | null
