@@ -30,8 +30,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'followers': {
-        // Extract followers from a username
-        const { source_username, account_id } = params
+        const { source_username } = params
         
         const { data, error } = await supabase
           .from('instagram_extractions')
@@ -47,7 +46,6 @@ Deno.serve(async (req) => {
 
         if (error) throw error
 
-        // Simulate extraction (in production, this would use Instagram API)
         const mockResults = Array.from({ length: 50 }, (_, i) => ({
           username: `follower_${i + 1}`,
           full_name: `User ${i + 1}`,
@@ -183,8 +181,6 @@ Deno.serve(async (req) => {
       }
 
       case 'dm_customers': {
-        const { account_id } = params
-        
         const { data, error } = await supabase
           .from('instagram_extractions')
           .insert({
@@ -274,7 +270,7 @@ Deno.serve(async (req) => {
 
         if (error) throw error
 
-        const mockResults = competitor_usernames.flatMap((competitor: string, idx: number) => 
+        const mockResults = competitor_usernames.flatMap((competitor: string) => 
           Array.from({ length: 20 }, (_, i) => ({
             username: `${competitor}_follower_${i + 1}`,
             source_competitor: competitor,
@@ -341,6 +337,320 @@ Deno.serve(async (req) => {
           .eq('id', data.id)
 
         return new Response(JSON.stringify({ extraction: { ...data, results: mockResults } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // NEW: Niche-targeted customers with statistics
+      case 'niche_customers': {
+        const { niche, country, min_followers, max_followers } = params
+        
+        const { data, error } = await supabase
+          .from('instagram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'niche_customers',
+            source: `${niche}_${country || 'global'}`,
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const mockResults = {
+          customers: Array.from({ length: 50 }, (_, i) => ({
+            username: `${niche}_customer_${i + 1}`,
+            full_name: `${niche} Customer ${i + 1}`,
+            follower_count: Math.floor(Math.random() * (max_followers || 50000)) + (min_followers || 100),
+            following_count: Math.floor(Math.random() * 2000),
+            posts_count: Math.floor(Math.random() * 500),
+            engagement_rate: (Math.random() * 8 + 0.5).toFixed(2),
+            is_business: Math.random() > 0.6,
+            niche_relevance_score: Math.floor(Math.random() * 40) + 60,
+            country: country || ['US', 'UK', 'CA', 'AU', 'DE'][Math.floor(Math.random() * 5)]
+          })),
+          statistics: {
+            total_found: 50,
+            avg_followers: 12500,
+            avg_engagement: 3.2,
+            business_accounts: 30,
+            personal_accounts: 20,
+            niche_distribution: {
+              [niche]: 100
+            },
+            country_distribution: [
+              { country: 'US', count: 20 },
+              { country: 'UK', count: 12 },
+              { country: 'CA', count: 8 },
+              { country: 'AU', count: 6 },
+              { country: 'DE', count: 4 }
+            ]
+          }
+        }
+
+        await supabase
+          .from('instagram_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.customers.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults, result_count: mockResults.customers.length } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // NEW: Hashtag extraction with analytics
+      case 'hashtag_analytics': {
+        const { hashtag } = params
+        
+        const { data, error } = await supabase
+          .from('instagram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'hashtag_analytics',
+            source: hashtag,
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const mockResults = {
+          hashtag: hashtag,
+          total_posts: Math.floor(Math.random() * 10000000) + 100000,
+          daily_posts: Math.floor(Math.random() * 50000) + 1000,
+          weekly_growth: (Math.random() * 15 + 1).toFixed(2),
+          avg_likes: Math.floor(Math.random() * 5000) + 100,
+          avg_comments: Math.floor(Math.random() * 200) + 10,
+          top_posts: Array.from({ length: 10 }, (_, i) => ({
+            post_id: `post_${i + 1}`,
+            username: `top_user_${i + 1}`,
+            likes: Math.floor(Math.random() * 100000) + 10000,
+            comments: Math.floor(Math.random() * 5000) + 100,
+            posted_at: new Date(Date.now() - i * 86400000).toISOString()
+          })),
+          related_hashtags: Array.from({ length: 20 }, (_, i) => ({
+            tag: `related_${hashtag}_${i + 1}`,
+            posts_count: Math.floor(Math.random() * 1000000),
+            correlation_score: (Math.random() * 0.5 + 0.5).toFixed(2)
+          })),
+          engagement_by_time: {
+            best_hours: [9, 12, 17, 20],
+            best_days: ['Monday', 'Wednesday', 'Saturday']
+          },
+          top_locations: [
+            { country: 'United States', percentage: 35 },
+            { country: 'Brazil', percentage: 12 },
+            { country: 'India', percentage: 10 },
+            { country: 'United Kingdom', percentage: 8 },
+            { country: 'Mexico', percentage: 7 }
+          ],
+          difficulty_score: Math.floor(Math.random() * 40) + 60,
+          recommended_use: Math.random() > 0.5 ? 'high_volume' : 'niche_targeting'
+        }
+
+        await supabase
+          .from('instagram_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: 1,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // NEW: Famous users by country
+      case 'famous_by_country': {
+        const { country_code, category, min_followers } = params
+        
+        const { data, error } = await supabase
+          .from('instagram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'famous_by_country',
+            source: `${country_code}_${category || 'all'}`,
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const categories = ['Entertainment', 'Sports', 'Fashion', 'Business', 'Music', 'Art']
+        const mockResults = Array.from({ length: 30 }, (_, i) => ({
+          username: `famous_${country_code}_${i + 1}`,
+          full_name: `Famous User ${i + 1}`,
+          verified: Math.random() > 0.3,
+          follower_count: Math.floor(Math.random() * 10000000) + (min_followers || 100000),
+          following_count: Math.floor(Math.random() * 1000) + 100,
+          posts_count: Math.floor(Math.random() * 5000) + 100,
+          engagement_rate: (Math.random() * 5 + 1).toFixed(2),
+          category: category || categories[Math.floor(Math.random() * categories.length)],
+          country: country_code,
+          bio: `Famous ${category || 'public figure'} from ${country_code}`,
+          avg_likes: Math.floor(Math.random() * 500000) + 10000,
+          avg_comments: Math.floor(Math.random() * 10000) + 500
+        }))
+
+        await supabase
+          .from('instagram_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults, result_count: mockResults.length } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // NEW: Full customer analysis
+      case 'customer_analysis': {
+        const { usernames } = params
+        
+        const { data, error } = await supabase
+          .from('instagram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'customer_analysis',
+            source: `analysis_${usernames.length}_users`,
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const mockResults = {
+          users: usernames.map((username: string, i: number) => ({
+            username,
+            full_name: `User ${username}`,
+            bio: `Bio for ${username}`,
+            follower_count: Math.floor(Math.random() * 100000) + 100,
+            following_count: Math.floor(Math.random() * 2000) + 50,
+            posts_count: Math.floor(Math.random() * 1000) + 10,
+            is_private: Math.random() > 0.7,
+            is_verified: Math.random() > 0.9,
+            is_business: Math.random() > 0.5,
+            engagement_rate: (Math.random() * 10 + 0.5).toFixed(2),
+            avg_likes: Math.floor(Math.random() * 5000) + 50,
+            avg_comments: Math.floor(Math.random() * 200) + 5,
+            follower_growth_30d: (Math.random() * 20 - 5).toFixed(2),
+            posting_frequency: ['daily', 'weekly', 'bi-weekly', 'monthly'][Math.floor(Math.random() * 4)],
+            most_active_hours: [9, 12, 18, 21].slice(0, Math.floor(Math.random() * 3) + 1),
+            top_hashtags: Array.from({ length: 5 }, (_, j) => `hashtag_${j + 1}`),
+            content_types: {
+              photos: Math.floor(Math.random() * 70) + 20,
+              videos: Math.floor(Math.random() * 20) + 5,
+              reels: Math.floor(Math.random() * 20) + 5,
+              carousels: Math.floor(Math.random() * 15)
+            }
+          })),
+          summary: {
+            total_analyzed: usernames.length,
+            avg_followers: Math.floor(Math.random() * 50000) + 5000,
+            avg_engagement: (Math.random() * 5 + 1).toFixed(2),
+            business_ratio: Math.floor(Math.random() * 40) + 30,
+            private_ratio: Math.floor(Math.random() * 30) + 10,
+            most_common_content: 'photos',
+            best_posting_time: '18:00'
+          }
+        }
+
+        await supabase
+          .from('instagram_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.users.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults, result_count: mockResults.users.length } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // NEW: Competitor analysis by country
+      case 'competitor_analysis': {
+        const { competitor_usernames, country_code } = params
+        
+        const { data, error } = await supabase
+          .from('instagram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'competitor_analysis',
+            source: `competitors_${country_code || 'global'}`,
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const mockResults = {
+          competitors: competitor_usernames.map((username: string) => ({
+            username,
+            full_name: `${username} Business`,
+            follower_count: Math.floor(Math.random() * 500000) + 10000,
+            following_count: Math.floor(Math.random() * 1000) + 100,
+            posts_count: Math.floor(Math.random() * 2000) + 200,
+            engagement_rate: (Math.random() * 6 + 1).toFixed(2),
+            avg_likes: Math.floor(Math.random() * 20000) + 500,
+            avg_comments: Math.floor(Math.random() * 500) + 20,
+            posting_frequency: `${Math.floor(Math.random() * 5) + 1} posts/week`,
+            top_content_types: ['Reels', 'Carousels', 'Stories'][Math.floor(Math.random() * 3)],
+            audience_overlap: Math.floor(Math.random() * 40) + 10,
+            growth_rate_30d: (Math.random() * 10 - 2).toFixed(2),
+            strengths: ['High engagement', 'Consistent posting', 'Quality content'].slice(0, Math.floor(Math.random() * 2) + 1),
+            weaknesses: ['Low video content', 'Irregular schedule'].slice(0, Math.floor(Math.random() * 2))
+          })),
+          market_analysis: {
+            total_market_followers: competitor_usernames.length * 150000,
+            avg_engagement_rate: 3.5,
+            market_growth_trend: 'growing',
+            content_trends: ['Short-form video', 'User-generated content', 'Behind-the-scenes'],
+            optimal_posting_times: ['9:00 AM', '12:00 PM', '6:00 PM'],
+            country_focus: country_code || 'Global',
+            recommendations: [
+              'Increase video content to match market trends',
+              'Focus on user engagement through stories',
+              'Post consistently during peak hours'
+            ]
+          },
+          audience_insights: {
+            common_interests: ['Technology', 'Lifestyle', 'Fashion'],
+            age_distribution: { '18-24': 30, '25-34': 45, '35-44': 20, '45+': 5 },
+            gender_split: { male: 48, female: 52 }
+          }
+        }
+
+        await supabase
+          .from('instagram_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.competitors.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults, result_count: mockResults.competitors.length } }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }

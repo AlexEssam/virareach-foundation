@@ -27,6 +27,8 @@ import InstagramAccounts from "./pages/instagram/InstagramAccounts";
 import InstagramExtractor from "./pages/instagram/InstagramExtractor";
 import InstagramFollow from "./pages/instagram/InstagramFollow";
 import InstagramMessaging from "./pages/instagram/InstagramMessaging";
+import InstagramAnalytics from "./pages/instagram/InstagramAnalytics";
+import InstagramMentions from "./pages/instagram/InstagramMentions";
 import XExtractors from "./pages/x/XExtractors";
 import XPublishing from "./pages/x/XPublishing";
 import XInteractions from "./pages/x/XInteractions";
@@ -78,6 +80,8 @@ const App = () => (
             <Route path="/instagram/extractor" element={<InstagramExtractor />} />
             <Route path="/instagram/follow" element={<InstagramFollow />} />
             <Route path="/instagram/messaging" element={<InstagramMessaging />} />
+            <Route path="/instagram/analytics" element={<InstagramAnalytics />} />
+            <Route path="/instagram/mentions" element={<InstagramMentions />} />
             <Route path="/x/extractors" element={<XExtractors />} />
             <Route path="/x/publishing" element={<XPublishing />} />
             <Route path="/x/interactions" element={<XInteractions />} />
