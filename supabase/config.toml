@@ -173,3 +173,6 @@ verify_jwt = true
 
 [functions.ai-text]
 verify_jwt = true
+
+[functions.ai-audio]
+verify_jwt = true
