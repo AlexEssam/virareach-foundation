@@ -164,3 +164,6 @@ verify_jwt = true
 
 [functions.google-maps-reviews]
 verify_jwt = true
+
+[functions.ai-image]
+verify_jwt = true
