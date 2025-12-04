@@ -19,7 +19,7 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className={`${sizeClasses[size]} gradient-primary rounded-xl flex items-center justify-center shadow-glow animate-glow`}>
         <Zap className="w-1/2 h-1/2 text-primary-foreground" />
       </div>
