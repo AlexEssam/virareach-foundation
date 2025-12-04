@@ -82,7 +82,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Image, label: "AI Image", path: "/ai/image" },
     { icon: Video, label: "AI Video", path: "/ai/video" },
     { icon: MessageSquare, label: "Campaigns", path: "/campaigns" },
-    { icon: Coins, label: "Points", disabled: true },
+    { icon: Coins, label: "Points", path: "/points" },
     { icon: Key, label: "License", disabled: true },
     { icon: Settings, label: "Settings", disabled: true },
   ];
