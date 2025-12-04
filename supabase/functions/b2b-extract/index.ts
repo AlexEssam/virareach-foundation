@@ -47,61 +47,178 @@ type RequestBody =
   | GetSourcesRequest;
 
 const B2B_SOURCES = [
+  // General B2B
   { 
     id: 'facebook_b2b', 
     name: 'Facebook B2B', 
     icon: 'facebook',
     description: 'Extract business pages, groups, and company data',
-    countries: ['Global']
-  },
-  { 
-    id: 'olx', 
-    name: 'OLX', 
-    icon: 'shopping-bag',
-    description: 'Classifieds marketplace data extraction',
-    countries: ['UAE', 'Saudi Arabia', 'Egypt', 'Pakistan', 'India', 'Poland', 'Portugal', 'Brazil', 'Indonesia']
-  },
-  { 
-    id: 'haraj', 
-    name: 'Haraj', 
-    icon: 'store',
-    description: 'Saudi Arabian marketplace listings',
-    countries: ['Saudi Arabia']
+    countries: ['Global'],
+    category: 'social'
   },
   { 
     id: 'google_maps', 
     name: 'Google Maps', 
     icon: 'map-pin',
     description: 'Business listings, reviews, and contact info',
-    countries: ['Global']
+    countries: ['Global'],
+    category: 'business'
   },
   { 
-    id: 'dubizzle', 
-    name: 'Dubizzle', 
-    icon: 'building',
-    description: 'UAE & Middle East classifieds',
-    countries: ['UAE', 'Egypt', 'Bahrain', 'Kuwait', 'Oman', 'Qatar', 'Saudi Arabia', 'Lebanon']
-  },
-  { 
-    id: 'opensooq', 
-    name: 'OpenSooq', 
-    icon: 'shopping-cart',
-    description: 'Arab world classifieds platform',
-    countries: ['Jordan', 'Saudi Arabia', 'UAE', 'Kuwait', 'Oman', 'Bahrain', 'Qatar', 'Egypt', 'Iraq', 'Libya']
-  },
-  { 
-    id: 'property_finder', 
-    name: 'Property Finder', 
-    icon: 'home',
-    description: 'Real estate listings and agent data',
-    countries: ['UAE', 'Saudi Arabia', 'Bahrain', 'Qatar', 'Egypt']
+    id: 'google_travel', 
+    name: 'Google Travel', 
+    icon: 'plane',
+    description: 'Hotels, flights, and travel business listings',
+    countries: ['Global'],
+    category: 'travel'
   },
   { 
     id: 'yellow_pages', 
     name: 'Yellow Pages', 
     icon: 'book-open',
     description: 'Business directory listings',
-    countries: ['USA', 'Canada', 'UK', 'Australia', 'UAE', 'India']
+    countries: ['USA', 'Canada', 'UK', 'Australia', 'UAE', 'India'],
+    category: 'business'
+  },
+  // Middle East Marketplaces
+  { 
+    id: 'olx', 
+    name: 'OLX', 
+    icon: 'shopping-bag',
+    description: 'Classifieds marketplace - All regions',
+    countries: ['UAE', 'Saudi Arabia', 'Egypt', 'Pakistan', 'India', 'Poland', 'Portugal', 'Brazil', 'Indonesia', 'Lebanon', 'Kuwait', 'Oman', 'Bahrain'],
+    category: 'marketplace'
+  },
+  { 
+    id: 'maroof', 
+    name: 'Maroof Saudi', 
+    icon: 'verified',
+    description: 'Saudi verified business registry',
+    countries: ['Saudi Arabia'],
+    category: 'business'
+  },
+  { 
+    id: 'aqar_city', 
+    name: 'Aqar City', 
+    icon: 'building',
+    description: 'Real estate listings and property data',
+    countries: ['Saudi Arabia', 'UAE'],
+    category: 'realestate'
+  },
+  { 
+    id: 'haraj', 
+    name: 'Haraj', 
+    icon: 'store',
+    description: 'Saudi Arabian marketplace listings',
+    countries: ['Saudi Arabia'],
+    category: 'marketplace'
+  },
+  { 
+    id: 'dubizzle', 
+    name: 'Dubizzle', 
+    icon: 'building',
+    description: 'UAE & Middle East classifieds',
+    countries: ['UAE', 'Egypt', 'Bahrain', 'Kuwait', 'Oman', 'Qatar', 'Saudi Arabia', 'Lebanon'],
+    category: 'marketplace'
+  },
+  { 
+    id: 'opensooq', 
+    name: 'OpenSooq', 
+    icon: 'shopping-cart',
+    description: 'Arab world classifieds platform',
+    countries: ['Jordan', 'Saudi Arabia', 'UAE', 'Kuwait', 'Oman', 'Bahrain', 'Qatar', 'Egypt', 'Iraq', 'Libya'],
+    category: 'marketplace'
+  },
+  { 
+    id: 'property_finder', 
+    name: 'Property Finder', 
+    icon: 'home',
+    description: 'Real estate listings and agent data',
+    countries: ['UAE', 'Saudi Arabia', 'Bahrain', 'Qatar', 'Egypt'],
+    category: 'realestate'
+  },
+  { 
+    id: 'waseet', 
+    name: 'Waseet', 
+    icon: 'newspaper',
+    description: 'Gulf classifieds and business listings',
+    countries: ['Kuwait', 'Bahrain', 'Qatar', 'UAE', 'Oman'],
+    category: 'marketplace'
+  },
+  { 
+    id: '4sale', 
+    name: '4Sale', 
+    icon: 'tag',
+    description: 'Kuwait marketplace and classifieds',
+    countries: ['Kuwait'],
+    category: 'marketplace'
+  },
+  { 
+    id: 'aqarmap', 
+    name: 'Aqarmap', 
+    icon: 'map',
+    description: 'Egyptian real estate portal',
+    countries: ['Egypt'],
+    category: 'realestate'
+  },
+  { 
+    id: 'saudi_aqar', 
+    name: 'Saudi Aqar', 
+    icon: 'home',
+    description: 'Saudi real estate portal',
+    countries: ['Saudi Arabia'],
+    category: 'realestate'
+  },
+  { 
+    id: 'mzad_qatar', 
+    name: 'MzadQatar', 
+    icon: 'gavel',
+    description: 'Qatar auction and classifieds',
+    countries: ['Qatar'],
+    category: 'marketplace'
+  },
+  // Doctor Databases
+  { 
+    id: 'koshofat', 
+    name: 'Koshofat', 
+    icon: 'stethoscope',
+    description: 'Doctor and clinic database',
+    countries: ['Egypt', 'Saudi Arabia'],
+    category: 'healthcare'
+  },
+  { 
+    id: 'altibbi', 
+    name: 'Altibbi', 
+    icon: 'heart-pulse',
+    description: 'Arabic medical professionals database',
+    countries: ['Saudi Arabia', 'UAE', 'Jordan', 'Egypt', 'Kuwait'],
+    category: 'healthcare'
+  },
+  // Rental Sites
+  { 
+    id: 'airbnb', 
+    name: 'Airbnb', 
+    icon: 'bed',
+    description: 'Short-term rental listings',
+    countries: ['Global'],
+    category: 'rental'
+  },
+  { 
+    id: 'booking', 
+    name: 'Booking.com', 
+    icon: 'hotel',
+    description: 'Hotel and accommodation data',
+    countries: ['Global'],
+    category: 'rental'
+  },
+  // Demographics
+  { 
+    id: 'demographics', 
+    name: 'Demographics Extraction', 
+    icon: 'users',
+    description: 'Extract full demographic data: religion, DOB, gender, job, education, origin',
+    countries: ['Global'],
+    category: 'demographics'
   }
 ];
 

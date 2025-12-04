@@ -24,7 +24,18 @@ import {
   BookOpen,
   ShoppingCart,
   Store,
-  RefreshCw
+  RefreshCw,
+  Plane,
+  BadgeCheck,
+  Newspaper,
+  Tag,
+  Map,
+  Gavel,
+  Stethoscope,
+  HeartPulse,
+  Bed,
+  Hotel,
+  Users
 } from "lucide-react";
 import { SiFacebook } from "@icons-pack/react-simple-icons";
 
@@ -34,6 +45,7 @@ interface B2BSource {
   icon: string;
   description: string;
   countries: string[];
+  category?: string;
 }
 
 interface Extraction {
@@ -172,7 +184,18 @@ const B2BDataCenter = () => {
       'building': <Building className="h-6 w-6 text-blue-500" />,
       'shopping-cart': <ShoppingCart className="h-6 w-6 text-purple-500" />,
       'home': <Home className="h-6 w-6 text-amber-500" />,
-      'book-open': <BookOpen className="h-6 w-6 text-yellow-500" />
+      'book-open': <BookOpen className="h-6 w-6 text-yellow-500" />,
+      'plane': <Plane className="h-6 w-6 text-sky-500" />,
+      'verified': <BadgeCheck className="h-6 w-6 text-emerald-500" />,
+      'newspaper': <Newspaper className="h-6 w-6 text-slate-500" />,
+      'tag': <Tag className="h-6 w-6 text-pink-500" />,
+      'map': <Map className="h-6 w-6 text-teal-500" />,
+      'gavel': <Gavel className="h-6 w-6 text-indigo-500" />,
+      'stethoscope': <Stethoscope className="h-6 w-6 text-red-400" />,
+      'heart-pulse': <HeartPulse className="h-6 w-6 text-rose-500" />,
+      'bed': <Bed className="h-6 w-6 text-violet-500" />,
+      'hotel': <Hotel className="h-6 w-6 text-cyan-500" />,
+      'users': <Users className="h-6 w-6 text-primary" />
     };
     return icons[iconName] || <Database className="h-6 w-6" />;
   };
