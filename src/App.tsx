@@ -61,6 +61,10 @@ import PinterestMessaging from "./pages/pinterest/PinterestMessaging";
 import PinterestFollow from "./pages/pinterest/PinterestFollow";
 import PinterestPublisher from "./pages/pinterest/PinterestPublisher";
 import PinterestBoards from "./pages/pinterest/PinterestBoards";
+import RedditAccounts from "./pages/reddit/RedditAccounts";
+import RedditCommunities from "./pages/reddit/RedditCommunities";
+import RedditUpvotes from "./pages/reddit/RedditUpvotes";
+import RedditPublisher from "./pages/reddit/RedditPublisher";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -130,6 +134,10 @@ const App = () => (
             <Route path="/pinterest/follow" element={<PinterestFollow />} />
             <Route path="/pinterest/publisher" element={<PinterestPublisher />} />
             <Route path="/pinterest/boards" element={<PinterestBoards />} />
+            <Route path="/reddit/accounts" element={<RedditAccounts />} />
+            <Route path="/reddit/communities" element={<RedditCommunities />} />
+            <Route path="/reddit/upvotes" element={<RedditUpvotes />} />
+            <Route path="/reddit/publisher" element={<RedditPublisher />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
