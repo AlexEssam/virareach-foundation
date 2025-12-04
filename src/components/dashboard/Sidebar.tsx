@@ -22,7 +22,8 @@ import {
   Linkedin,
   Mail,
   FileText,
-  Database
+  Database,
+  Smartphone
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -81,6 +82,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   ];
 
   const whatsappMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/whatsapp/accounts" },
     { icon: Send, label: "Sending", path: "/whatsapp/sending" },
     { icon: Download, label: "Extractor", path: "/whatsapp/extractor" },
     { icon: Users, label: "Groups", path: "/whatsapp/groups" },
@@ -230,7 +232,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <Button
             variant={isWhatsappActive ? "glow" : "ghost"}
             className="w-full justify-center px-3"
-            onClick={() => navigate("/whatsapp/sending")}
+            onClick={() => navigate("/whatsapp/accounts")}
           >
             <SiWhatsapp className="h-5 w-5 shrink-0" color="#25D366" />
           </Button>
