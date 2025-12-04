@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, RefreshCw, Users, UserCheck } from "lucide-react";
+import { Plus, Trash2, LogIn } from "lucide-react";
 import { SiInstagram } from "@icons-pack/react-simple-icons";
 import {
   Dialog,
@@ -16,6 +14,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface InstagramAccount {
   id: string;
@@ -28,6 +34,7 @@ interface InstagramAccount {
   daily_unfollow_count: number;
   daily_dm_count: number;
   proxy_host: string | null;
+  session_data: string | null;
   created_at: string;
 }
 
@@ -36,6 +43,7 @@ export default function InstagramAccounts() {
   const [accounts, setAccounts] = useState<InstagramAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -88,7 +96,7 @@ export default function InstagramAccounts() {
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Account added successfully" });
+      toast({ title: "Success", description: "Channel created successfully" });
       setDialogOpen(false);
       setFormData({
         username: "",
@@ -117,7 +125,7 @@ export default function InstagramAccounts() {
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Account deleted successfully" });
+      toast({ title: "Success", description: "Channel deleted successfully" });
       fetchAccounts();
     } catch (error: any) {
       toast({
@@ -128,23 +136,26 @@ export default function InstagramAccounts() {
     }
   };
 
-  const handleResetCounts = async (id: string) => {
-    try {
-      const { error } = await supabase.functions.invoke("instagram-accounts", {
-        body: { action: "reset_daily_counts", id },
-      });
+  const handleLogin = (account: InstagramAccount) => {
+    window.open("https://www.instagram.com/accounts/login/", "_blank");
+    toast({
+      title: "Login to Instagram",
+      description: `Please login with account: ${account.username}`,
+    });
+  };
 
-      if (error) throw error;
-
-      toast({ title: "Success", description: "Daily counts reset" });
-      fetchAccounts();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+  const getStatusLabel = (account: InstagramAccount) => {
+    if (account.session_data) {
+      return "Logged";
     }
+    return "Not_logged";
+  };
+
+  const getPath = (account: InstagramAccount) => {
+    if (account.proxy_host) {
+      return account.proxy_host;
+    }
+    return "C:\\Users\\Default";
   };
 
   return (
@@ -158,20 +169,20 @@ export default function InstagramAccounts() {
               <SiInstagram className="h-8 w-8" color="#E4405F" />
               <div>
                 <h1 className="text-3xl font-bold">Instagram Accounts</h1>
-                <p className="text-muted-foreground">Manage your Instagram accounts</p>
+                <p className="text-muted-foreground">Manage your Instagram channels</p>
               </div>
             </div>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 bg-[hsl(346,84%,46%)] hover:bg-[hsl(346,84%,40%)] text-white">
                   <Plus className="h-4 w-4" />
-                  Add Account
+                  Create Channel
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add Instagram Account</DialogTitle>
+                  <DialogTitle>Create Instagram Channel</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -183,11 +194,11 @@ export default function InstagramAccounts() {
                     />
                   </div>
                   <div>
-                    <Label>Account Name (optional)</Label>
+                    <Label>Channel Name (optional)</Label>
                     <Input
                       value={formData.account_name}
                       onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                      placeholder="My Business Account"
+                      placeholder="My Business Channel"
                     />
                   </div>
                   <div>
@@ -233,87 +244,99 @@ export default function InstagramAccounts() {
                       />
                     </div>
                   </div>
-                  <Button onClick={handleAddAccount} className="w-full">
-                    Add Account
+                  <Button onClick={handleAddAccount} className="w-full bg-[hsl(346,84%,46%)] hover:bg-[hsl(346,84%,40%)] text-white">
+                    Create Channel
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
 
-          {loading ? (
-            <div className="text-center py-8">Loading accounts...</div>
-          ) : accounts.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <SiInstagram className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">No Instagram accounts added yet</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {accounts.map((account) => (
-                <Card key={account.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <SiInstagram className="h-5 w-5" color="#E4405F" />
-                        @{account.username}
-                      </CardTitle>
-                      <Badge variant={account.status === "active" ? "default" : "secondary"}>
-                        {account.status}
-                      </Badge>
-                    </div>
-                    {account.account_name && (
-                      <p className="text-sm text-muted-foreground">{account.account_name}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{account.followers_count} followers</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
-                        <span>{account.following_count} following</span>
-                      </div>
-                    </div>
-
-                    <div className="text-xs space-y-1 text-muted-foreground">
-                      <p>Daily follows: {account.daily_follow_count}/100</p>
-                      <p>Daily unfollows: {account.daily_unfollow_count}/100</p>
-                      <p>Daily DMs: {account.daily_dm_count}/50</p>
-                    </div>
-
-                    {account.proxy_host && (
-                      <p className="text-xs text-muted-foreground">
-                        Proxy: {account.proxy_host}
-                      </p>
-                    )}
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleResetCounts(account.id)}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Reset Counts
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteAccount(account.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-16 font-semibold">ID</TableHead>
+                  <TableHead className="font-semibold">Channels</TableHead>
+                  <TableHead className="font-semibold">Active</TableHead>
+                  <TableHead className="font-semibold">Path</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Login</TableHead>
+                  <TableHead className="font-semibold">Delete</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Loading channels...
+                    </TableCell>
+                  </TableRow>
+                ) : accounts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <SiInstagram className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-muted-foreground">No Instagram channels added yet</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  accounts.map((account, index) => (
+                    <TableRow 
+                      key={account.id}
+                      className={`cursor-pointer transition-colors ${selectedId === account.id ? 'bg-primary/20' : 'hover:bg-muted/50'}`}
+                      onClick={() => setSelectedId(account.id)}
+                    >
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell className="font-medium">
+                        {account.account_name || account.username}
+                      </TableCell>
+                      <TableCell>
+                        <span className={account.status === 'active' ? 'text-green-500' : 'text-muted-foreground'}>
+                          {account.status === 'active' ? 'Yes' : 'No'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {getPath(account)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={account.session_data ? 'text-green-500' : 'text-orange-500'}>
+                          {getStatusLabel(account)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLogin(account);
+                          }}
+                          className="text-primary hover:text-primary/80"
+                        >
+                          <LogIn className="h-4 w-4 mr-1" />
+                          login
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAccount(account.id);
+                          }}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </main>
     </div>
