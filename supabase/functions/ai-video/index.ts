@@ -13,31 +13,29 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Missing authorization token' }), {
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const token = authHeader.replace('Bearer ', '');
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader! } } }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
     if (authError || !user) {
-      console.error('Auth failed:', authError?.message || 'No user');
+      console.error('Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     console.log(`AI Video action requested by user: ${user.id}`);
 
     const { action, prompt, image, duration, motion_style, source_video, target_video, audio, video, new_face_image, resolution } = await req.json();
