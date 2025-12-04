@@ -15,6 +15,10 @@ import FacebookGroupAnalyzer from "./pages/facebook/FacebookGroupAnalyzer";
 import WhatsAppSending from "./pages/whatsapp/WhatsAppSending";
 import WhatsAppExtractor from "./pages/whatsapp/WhatsAppExtractor";
 import WhatsAppGroups from "./pages/whatsapp/WhatsAppGroups";
+import InstagramAccounts from "./pages/instagram/InstagramAccounts";
+import InstagramExtractor from "./pages/instagram/InstagramExtractor";
+import InstagramFollow from "./pages/instagram/InstagramFollow";
+import InstagramMessaging from "./pages/instagram/InstagramMessaging";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +42,10 @@ const App = () => (
             <Route path="/whatsapp/sending" element={<WhatsAppSending />} />
             <Route path="/whatsapp/extractor" element={<WhatsAppExtractor />} />
             <Route path="/whatsapp/groups" element={<WhatsAppGroups />} />
+            <Route path="/instagram/accounts" element={<InstagramAccounts />} />
+            <Route path="/instagram/extractor" element={<InstagramExtractor />} />
+            <Route path="/instagram/follow" element={<InstagramFollow />} />
+            <Route path="/instagram/messaging" element={<InstagramMessaging />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
