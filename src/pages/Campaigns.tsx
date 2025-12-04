@@ -35,10 +35,23 @@ import {
   Image,
   Video,
   X,
-  LogIn
+  LogIn,
+  MessageCircle
 } from "lucide-react";
-import { SiPinterest, SiSnapchat } from "@icons-pack/react-simple-icons";
+import { SiPinterest, SiSnapchat, SiFacebook, SiX, SiTelegram, SiTiktok, SiReddit } from "@icons-pack/react-simple-icons";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+const platformOptions = [
+  { id: 'facebook', label: 'Facebook', icon: SiFacebook, color: 'text-blue-600' },
+  { id: 'instagram', label: 'Instagram', icon: Instagram, color: 'text-pink-500' },
+  { id: 'twitter', label: 'Twitter', icon: SiX, color: 'text-foreground' },
+  { id: 'email', label: 'Email', icon: Mail, color: 'text-orange-500' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, color: 'text-green-500' },
+  { id: 'telegram', label: 'Telegram', icon: SiTelegram, color: 'text-sky-500' },
+  { id: 'tiktok', label: 'TikTok', icon: SiTiktok, color: 'text-foreground' },
+  { id: 'reddit', label: 'Reddit', icon: SiReddit, color: 'text-orange-600' },
+];
 
 interface Campaign {
   id: string;
@@ -67,8 +80,8 @@ export default function Campaigns() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
-    platform: 'email',
-    type: 'message',
+    platform: 'facebook',
+    type: 'broadcast',
     content: '',
     scheduled_at: ''
   });
@@ -288,7 +301,7 @@ export default function Campaigns() {
 
       toast.success('Campaign created successfully!');
       setCreateDialogOpen(false);
-      setNewCampaign({ name: '', platform: 'email', type: 'message', content: '', scheduled_at: '' });
+      setNewCampaign({ name: '', platform: 'facebook', type: 'broadcast', content: '', scheduled_at: '' });
       removeMedia();
       loadCampaigns();
     } catch (error: any) {
@@ -313,8 +326,14 @@ export default function Campaigns() {
 
   const getPlatformConfig = (platform: string) => {
     const configs: Record<string, { icon: any; color: string; label: string }> = {
+      facebook: { icon: SiFacebook, color: 'text-blue-600', label: 'Facebook' },
       email: { icon: Mail, color: 'text-orange-500', label: 'Email' },
       instagram: { icon: Instagram, color: 'text-pink-500', label: 'Instagram' },
+      twitter: { icon: SiX, color: 'text-foreground', label: 'Twitter' },
+      whatsapp: { icon: MessageCircle, color: 'text-green-500', label: 'WhatsApp' },
+      telegram: { icon: SiTelegram, color: 'text-sky-500', label: 'Telegram' },
+      tiktok: { icon: SiTiktok, color: 'text-foreground', label: 'TikTok' },
+      reddit: { icon: SiReddit, color: 'text-orange-600', label: 'Reddit' },
       linkedin: { icon: Linkedin, color: 'text-blue-500', label: 'LinkedIn' },
       pinterest: { icon: SiPinterest, color: 'text-red-500', label: 'Pinterest' },
       snapchat: { icon: SiSnapchat, color: 'text-yellow-500', label: 'Snapchat' },
@@ -380,65 +399,72 @@ export default function Campaigns() {
                   New Campaign
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                  <DialogTitle>Create Campaign</DialogTitle>
+                  <DialogTitle>Create New Campaign</DialogTitle>
                   <DialogDescription>
                     Set up a new marketing campaign to reach your audience
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="space-y-5 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Campaign Name</label>
+                    <label className="text-sm font-medium">Campaign Name <span className="text-destructive">*</span></label>
                     <Input
                       placeholder="e.g., Summer Sale Promo"
                       value={newCampaign.name}
                       onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Platform</label>
-                      <Select
-                        value={newCampaign.platform}
-                        onValueChange={(value) => setNewCampaign({ ...newCampaign, platform: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="email">Email</SelectItem>
-                          <SelectItem value="instagram">Instagram</SelectItem>
-                          <SelectItem value="linkedin">LinkedIn</SelectItem>
-                          <SelectItem value="pinterest">Pinterest</SelectItem>
-                          <SelectItem value="snapchat">Snapchat</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Type</label>
-                      <Select
-                        value={newCampaign.type}
-                        onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="message">Direct Message</SelectItem>
-                          <SelectItem value="broadcast">Broadcast</SelectItem>
-                          <SelectItem value="followup">Follow-up</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Platform <span className="text-destructive">*</span></label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {platformOptions.map((platform) => {
+                        const Icon = platform.icon;
+                        return (
+                          <button
+                            key={platform.id}
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, platform: platform.id })}
+                            className={cn(
+                              "flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all hover:bg-muted/50",
+                              newCampaign.platform === platform.id
+                                ? "border-primary bg-primary/5"
+                                : "border-border"
+                            )}
+                          >
+                            <Icon className={cn("h-5 w-5 mb-1.5", platform.color)} />
+                            <span className="text-xs font-medium">{platform.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Message Content</label>
+                    <label className="text-sm font-medium">Campaign Type <span className="text-destructive">*</span></label>
+                    <Select
+                      value={newCampaign.type}
+                      onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="broadcast">Broadcast</SelectItem>
+                        <SelectItem value="message">Direct Message</SelectItem>
+                        <SelectItem value="followup">Follow-up</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Campaign Content <span className="text-destructive">*</span></label>
                     <Textarea
                       placeholder="Write your campaign message here..."
                       value={newCampaign.content}
                       onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
-                      rows={3}
+                      rows={4}
                     />
                   </div>
 
