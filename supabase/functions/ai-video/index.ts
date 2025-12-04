@@ -35,9 +35,31 @@ serve(async (req) => {
 
     console.log(`AI Video action: ${action}, user: ${user.id}`);
 
+    // Helper function to extract image from response
+    const extractImage = (data: any): string | null => {
+      // Check various response formats
+      const message = data.choices?.[0]?.message;
+      if (message?.images?.[0]?.image_url?.url) {
+        return message.images[0].image_url.url;
+      }
+      if (message?.content && typeof message.content === 'string') {
+        // Check if content contains base64 image
+        const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+        if (base64Match) return base64Match[0];
+      }
+      // Check for inline_data format
+      if (message?.content && Array.isArray(message.content)) {
+        for (const part of message.content) {
+          if (part.type === 'image' && part.image_url?.url) {
+            return part.image_url.url;
+          }
+        }
+      }
+      return null;
+    };
+
     switch (action) {
       case 'generate_video': {
-        // Use AI to generate a video concept/storyboard description
         const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -45,16 +67,18 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{ 
               role: 'user', 
-              content: `Create a detailed visual storyboard frame for this video concept: "${prompt}". Generate a single key frame image that represents this video scene.`
+              content: `Create a detailed visual storyboard frame for this video concept: "${prompt}". Generate a single high-quality key frame image that represents this video scene. Ultra detailed, cinematic, professional quality.`
             }],
             modalities: ['image', 'text'],
           }),
         });
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
           if (response.status === 429) {
             return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
               status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -69,13 +93,15 @@ serve(async (req) => {
         }
 
         const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Generate video response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
         const textResponse = data.choices?.[0]?.message?.content;
         
         return new Response(JSON.stringify({ 
-          video_url: imageUrl, // Returns a key frame for now
-          storyboard: textResponse,
-          meta: { model: 'gemini-2.5-flash-image-preview', prompt, duration: duration || '5s' }
+          video_url: imageUrl,
+          storyboard: typeof textResponse === 'string' ? textResponse : null,
+          meta: { model: 'gemini-2.5-flash-image', prompt, duration: duration || '5s' }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -83,7 +109,7 @@ serve(async (req) => {
 
       case 'image_to_video': {
         const motionPrompts: Record<string, string> = {
-          'zoom_in': 'Create an animated version of this image with a smooth zoom-in effect, focusing on the center of the image.',
+          'zoom_in': 'Create an animated version of this image with a smooth zoom-in effect, focusing on the center.',
           'zoom_out': 'Create an animated version showing a zoom-out effect, revealing more of the scene.',
           'pan_left': 'Create a smooth panning motion from right to left across this image.',
           'pan_right': 'Create a smooth panning motion from left to right across this image.',
@@ -102,11 +128,11 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: `${motionPrompt}. Generate the next frame in the animation sequence.` },
+                { type: 'text', text: `${motionPrompt}. Generate the next frame in the animation sequence. High quality, smooth transition.` },
                 { type: 'image_url', image_url: { url: image } }
               ]
             }],
@@ -114,14 +140,21 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) throw new Error(`AI gateway error: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Image to video response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
           motion_style,
-          frames: [image, imageUrl] // Original + animated frame
+          frames: [image, imageUrl].filter(Boolean)
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -135,11 +168,11 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: 'Analyze the motion pattern from this source and create a visualization that syncs with this motion style.' },
+                { type: 'text', text: 'Analyze the motion pattern from this source and create a visualization that syncs with this motion style. Generate a high quality result.' },
                 { type: 'image_url', image_url: { url: source_video } }
               ]
             }],
@@ -147,11 +180,18 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) throw new Error(`AI gateway error: ${response.status}`);
-        const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
         
-        return new Response(JSON.stringify({ generated_video_url: imageUrl }), {
+        const data = await response.json();
+        console.log('Motion sync response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
+        
+        return new Response(JSON.stringify({ video_url: imageUrl }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -164,11 +204,11 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: 'Create a variation of this face/portrait with the mouth slightly open as if speaking. Make it look natural and keep all other features identical.' },
+                { type: 'text', text: 'Create a variation of this face/portrait with the mouth slightly open as if speaking. Make it look natural and keep all other features identical. High quality output.' },
                 { type: 'image_url', image_url: { url: image } }
               ]
             }],
@@ -176,13 +216,20 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) throw new Error(`AI gateway error: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Lip sync response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
-          frames: [image, imageUrl]
+          frames: [image, imageUrl].filter(Boolean)
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -196,11 +243,11 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: 'Replace the main character/face in this scene with the face from the reference image while keeping the same pose, lighting, and scene context.' },
+                { type: 'text', text: 'Replace the main character/face in this scene with the face from the reference image while keeping the same pose, lighting, and scene context. High quality, realistic result.' },
                 { type: 'image_url', image_url: { url: video } },
                 { type: 'image_url', image_url: { url: new_face_image } }
               ]
@@ -209,9 +256,16 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) throw new Error(`AI gateway error: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Replace character response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
         
         return new Response(JSON.stringify({ video_url: imageUrl }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -226,11 +280,11 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-image-preview',
+            model: 'google/gemini-2.5-flash-image',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: `Enhance and upscale this image to ${resolution || '4K'} quality. Add more detail, improve sharpness, and enhance overall visual quality while preserving the original content.` },
+                { type: 'text', text: `Enhance and upscale this image to ${resolution || '4K'} quality. Add more detail, improve sharpness, and enhance overall visual quality while preserving the original content. Ultra high resolution output.` },
                 { type: 'image_url', image_url: { url: video } }
               ]
             }],
@@ -238,12 +292,19 @@ serve(async (req) => {
           }),
         });
 
-        if (!response.ok) throw new Error(`AI gateway error: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI gateway error:', response.status, errorText);
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
+        
         const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Video upscale response:', JSON.stringify(data).slice(0, 500));
+        
+        const imageUrl = extractImage(data);
         
         return new Response(JSON.stringify({ 
-          upscaled_video_url: imageUrl,
+          video_url: imageUrl,
           resolution: resolution || '4K'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
