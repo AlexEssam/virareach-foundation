@@ -27,7 +27,8 @@ import {
   AtSign,
   MapPin,
   Image,
-  Video
+  Video,
+  Type
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest, SiReddit, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -81,6 +82,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Image, label: "AI Image", path: "/ai/image" },
     { icon: Video, label: "AI Video", path: "/ai/video" },
+    { icon: Type, label: "Text Tools", path: "/ai/text" },
     { icon: MessageSquare, label: "Campaigns", path: "/campaigns" },
     { icon: Coins, label: "Points", path: "/points" },
     { icon: Key, label: "License", path: "/license" },
