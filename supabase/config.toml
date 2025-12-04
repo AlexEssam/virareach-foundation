@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.tiktok-accounts]
 verify_jwt = true
+
+[functions.tiktok-mentions]
+verify_jwt = true

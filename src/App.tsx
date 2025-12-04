@@ -50,8 +50,10 @@ import LinkedInAnalysis from "./pages/linkedin/LinkedInAnalysis";
 import EmailCampaigns from "./pages/email/EmailCampaigns";
 import EmailTemplates from "./pages/email/EmailTemplates";
 import B2BDataCenter from "./pages/b2b/B2BDataCenter";
+import TikTokAccountManager from "./pages/tiktok/TikTokAccountManager";
 import TikTokExtractor from "./pages/tiktok/TikTokExtractor";
 import TikTokFollow from "./pages/tiktok/TikTokFollow";
+import TikTokMentions from "./pages/tiktok/TikTokMentions";
 import TikTokMessaging from "./pages/tiktok/TikTokMessaging";
 import NotFound from "./pages/NotFound";
 
@@ -111,8 +113,10 @@ const App = () => (
             <Route path="/email/campaigns" element={<EmailCampaigns />} />
             <Route path="/email/templates" element={<EmailTemplates />} />
             <Route path="/b2b/data-center" element={<B2BDataCenter />} />
+            <Route path="/tiktok/accounts" element={<TikTokAccountManager />} />
             <Route path="/tiktok/extractor" element={<TikTokExtractor />} />
             <Route path="/tiktok/follow" element={<TikTokFollow />} />
+            <Route path="/tiktok/mentions" element={<TikTokMentions />} />
             <Route path="/tiktok/messaging" element={<TikTokMessaging />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

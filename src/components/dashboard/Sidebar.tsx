@@ -139,8 +139,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   ];
 
   const tiktokMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/tiktok/accounts" },
     { icon: Download, label: "Extractor", path: "/tiktok/extractor" },
     { icon: UserPlus, label: "Follow/Unfollow", path: "/tiktok/follow" },
+    { icon: AtSign, label: "Mentions", path: "/tiktok/mentions" },
     { icon: Send, label: "Messaging", path: "/tiktok/messaging" },
   ];
 
