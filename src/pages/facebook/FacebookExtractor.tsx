@@ -22,13 +22,15 @@ interface Extraction {
 }
 
 const extractionTypes = [
-  { value: "likers", label: "Post Likers", icon: ThumbsUp },
-  { value: "commenters", label: "Post Commenters", icon: MessageCircle },
-  { value: "sharers", label: "Post Sharers", icon: Share2 },
+  { value: "post_likers", label: "Post Likers", icon: ThumbsUp },
+  { value: "post_commenters", label: "Post Commenters", icon: MessageCircle },
+  { value: "phone_numbers", label: "Phone Numbers from Commenters", icon: Users },
+  { value: "demographics", label: "Full Demographics (Age, Job, etc)", icon: UserPlus },
+  { value: "groups", label: "Groups by Interest", icon: Users },
+  { value: "post_metadata", label: "Post Metadata & Engagement", icon: Share2 },
   { value: "group_members", label: "Group Members", icon: Users },
-  { value: "page_fans", label: "Page Fans", icon: UserPlus },
-  { value: "active_friends", label: "Active Friends", icon: Users },
-  { value: "page_messagers", label: "Page Messagers", icon: MessageCircle },
+  { value: "page_followers", label: "Page Followers", icon: UserPlus },
+  { value: "friends", label: "Friends List", icon: Users },
 ];
 
 export default function FacebookExtractor() {

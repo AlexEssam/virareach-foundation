@@ -75,6 +75,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/facebook/extractor" },
     { icon: Send, label: "Publisher", path: "/facebook/publisher" },
     { icon: BarChart3, label: "Group Analyzer", path: "/facebook/analyzer" },
+    { icon: MessageSquare, label: "Messaging", path: "/facebook/messaging" },
+    { icon: Heart, label: "Social Automation", path: "/facebook/social" },
+    { icon: Users, label: "Groups Manager", path: "/facebook/groups" },
   ];
 
   const whatsappMenuItems = [

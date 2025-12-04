@@ -60,8 +60,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Simulate extraction process
-      // In production, this would queue a background job
+      // Generate mock results based on extraction type
       const mockResults = generateMockResults(extraction_type);
 
       // Update extraction with results
@@ -129,13 +128,109 @@ function generateMockResults(extractionType: string): any[] {
   const results = [];
 
   for (let i = 0; i < count; i++) {
-    results.push({
+    const baseData = {
       id: `user_${Math.random().toString(36).substr(2, 9)}`,
-      name: `User ${i + 1}`,
-      profile_url: `https://facebook.com/user${i + 1}`,
-      extracted_from: extractionType,
       extracted_at: new Date().toISOString(),
-    });
+    };
+
+    switch (extractionType) {
+      case "post_likers":
+      case "post_commenters":
+        results.push({
+          ...baseData,
+          name: `User ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          extracted_from: extractionType,
+        });
+        break;
+
+      case "phone_numbers":
+        results.push({
+          ...baseData,
+          name: `User ${i + 1}`,
+          phone: `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+        });
+        break;
+
+      case "demographics":
+        results.push({
+          ...baseData,
+          name: `User ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          age: Math.floor(Math.random() * 40) + 18,
+          gender: Math.random() > 0.5 ? "Male" : "Female",
+          job_title: ["Engineer", "Manager", "Designer", "Marketer", "Developer"][Math.floor(Math.random() * 5)],
+          education: ["Bachelor's", "Master's", "PhD", "High School"][Math.floor(Math.random() * 4)],
+          city: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"][Math.floor(Math.random() * 5)],
+          country: "United States",
+          interests: ["Technology", "Business", "Marketing", "Sports", "Music"].slice(0, Math.floor(Math.random() * 3) + 1),
+        });
+        break;
+
+      case "groups":
+        results.push({
+          ...baseData,
+          group_id: `group_${Math.random().toString(36).substr(2, 9)}`,
+          group_name: `Group ${i + 1}`,
+          group_url: `https://facebook.com/groups/${Math.random().toString(36).substr(2, 9)}`,
+          member_count: Math.floor(Math.random() * 50000) + 100,
+          interests: ["Marketing", "Business", "Technology"][Math.floor(Math.random() * 3)],
+          is_public: Math.random() > 0.3,
+        });
+        break;
+
+      case "post_metadata":
+        results.push({
+          ...baseData,
+          post_id: `post_${Math.random().toString(36).substr(2, 9)}`,
+          content_type: ["text", "image", "video", "link"][Math.floor(Math.random() * 4)],
+          likes_count: Math.floor(Math.random() * 5000),
+          comments_count: Math.floor(Math.random() * 500),
+          shares_count: Math.floor(Math.random() * 200),
+          engagement_rate: (Math.random() * 10).toFixed(2) + "%",
+          performance_score: Math.floor(Math.random() * 100),
+          posted_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        break;
+
+      case "group_members":
+        results.push({
+          ...baseData,
+          name: `Member ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          role: Math.random() > 0.9 ? "Admin" : Math.random() > 0.7 ? "Moderator" : "Member",
+          joined_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        break;
+
+      case "page_followers":
+        results.push({
+          ...baseData,
+          name: `Follower ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          followed_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        break;
+
+      case "friends":
+        results.push({
+          ...baseData,
+          name: `Friend ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          mutual_friends: Math.floor(Math.random() * 50),
+          added_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        break;
+
+      default:
+        results.push({
+          ...baseData,
+          name: `User ${i + 1}`,
+          profile_url: `https://facebook.com/user${i + 1}`,
+          extracted_from: extractionType,
+        });
+    }
   }
 
   return results;

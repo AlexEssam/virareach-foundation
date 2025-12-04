@@ -286,6 +286,141 @@ export type Database = {
           },
         ]
       }
+      facebook_groups: {
+        Row: {
+          account_id: string | null
+          can_post: boolean | null
+          created_at: string
+          group_id: string | null
+          group_name: string
+          group_url: string | null
+          has_rules: boolean | null
+          id: string
+          interests: string[] | null
+          joined_at: string | null
+          member_count: number | null
+          post_restrictions: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          can_post?: boolean | null
+          created_at?: string
+          group_id?: string | null
+          group_name: string
+          group_url?: string | null
+          has_rules?: boolean | null
+          id?: string
+          interests?: string[] | null
+          joined_at?: string | null
+          member_count?: number | null
+          post_restrictions?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          can_post?: boolean | null
+          created_at?: string
+          group_id?: string | null
+          group_name?: string
+          group_url?: string | null
+          has_rules?: boolean | null
+          id?: string
+          interests?: string[] | null
+          joined_at?: string | null
+          member_count?: number | null
+          post_restrictions?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_groups_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "facebook_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facebook_groups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facebook_messages: {
+        Row: {
+          account_id: string | null
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          media_urls: string[] | null
+          message_type: string
+          recipients: string[] | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          target_type: string
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          media_urls?: string[] | null
+          message_type?: string
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          target_type?: string
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          media_urls?: string[] | null
+          message_type?: string
+          recipients?: string[] | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          target_type?: string
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "facebook_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facebook_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facebook_publications: {
         Row: {
           account_id: string | null
@@ -333,6 +468,66 @@ export type Database = {
           },
           {
             foreignKeyName: "facebook_publications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facebook_social_actions: {
+        Row: {
+          account_id: string | null
+          action_type: string
+          content: string | null
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          status: string
+          target_id: string | null
+          target_name: string | null
+          target_url: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          action_type: string
+          content?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_id?: string | null
+          target_name?: string | null
+          target_url?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          action_type?: string
+          content?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_id?: string | null
+          target_name?: string | null
+          target_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facebook_social_actions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "facebook_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facebook_social_actions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
