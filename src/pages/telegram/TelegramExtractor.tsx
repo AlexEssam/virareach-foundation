@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Users, MessageSquare, Archive, Phone, Loader2 } from "lucide-react";
+import { Download, Users, MessageSquare, Archive, Phone, Clock, Eye, UserSearch, Filter, Loader2 } from "lucide-react";
 
 interface Extraction {
   id: string;
@@ -31,9 +33,13 @@ interface TelegramAccount {
 
 const extractionTypes = [
   { value: "group_members", label: "Group Members", icon: Users, description: "Extract all visible members from a group" },
-  { value: "group_members_hidden", label: "Hidden Members (Premium)", icon: Users, description: "Extract hidden members using premium methods" },
+  { value: "group_members_hidden", label: "Hidden Members (Premium)", icon: Eye, description: "Extract hidden members using premium methods" },
+  { value: "hidden_members_full", label: "Full Hidden Info", icon: UserSearch, description: "Extract complete hidden member profiles" },
+  { value: "last_seen", label: "Last Seen Timestamps", icon: Clock, description: "Extract last seen status for users" },
+  { value: "messenger_customers", label: "Messenger Customers", icon: MessageSquare, description: "Extract customers who messaged you" },
+  { value: "contacts_filtered", label: "Filtered Contacts", icon: Filter, description: "Filter contacts by phone patterns" },
   { value: "chats", label: "Chats List", icon: MessageSquare, description: "Extract all chats from an account" },
-  { value: "contacts", label: "Contacts", icon: Phone, description: "Extract all contacts with phone numbers" },
+  { value: "contacts", label: "All Contacts", icon: Phone, description: "Extract all contacts with phone numbers" },
   { value: "archived", label: "Archived Chats", icon: Archive, description: "Extract archived chats and content" },
 ];
 
@@ -49,6 +55,18 @@ export default function TelegramExtractor() {
   const [groupLink, setGroupLink] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [includeHidden, setIncludeHidden] = useState(false);
+  
+  // Last seen extraction
+  const [usernamesList, setUsernamesList] = useState("");
+  
+  // Messenger customers
+  const [minMessages, setMinMessages] = useState("1");
+  const [timeRange, setTimeRange] = useState("30");
+  
+  // Contact filtering
+  const [phonePrefixes, setPhonePrefixes] = useState("");
+  const [countryCodes, setCountryCodes] = useState("");
+  const [excludePrefixes, setExcludePrefixes] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -78,30 +96,72 @@ export default function TelegramExtractor() {
       return;
     }
 
-    if ((extractionType === "group_members" || extractionType === "group_members_hidden") && !groupLink) {
+    // Validation based on extraction type
+    if ((extractionType === "group_members" || extractionType === "group_members_hidden" || extractionType === "hidden_members_full") && !groupLink) {
       toast({ title: "Error", description: "Please enter a group link", variant: "destructive" });
       return;
     }
 
-    if ((extractionType === "chats" || extractionType === "contacts" || extractionType === "archived") && !selectedAccount) {
+    if (extractionType === "last_seen" && !usernamesList.trim()) {
+      toast({ title: "Error", description: "Please enter usernames or user IDs", variant: "destructive" });
+      return;
+    }
+
+    if ((extractionType === "chats" || extractionType === "contacts" || extractionType === "archived" || 
+         extractionType === "messenger_customers" || extractionType === "contacts_filtered") && !selectedAccount) {
       toast({ title: "Error", description: "Please select an account", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      const action = extractionType === "group_members" || extractionType === "group_members_hidden" 
-        ? "group_members" 
-        : extractionType;
+      let action = extractionType;
+      let body: Record<string, unknown> = {};
 
-      const { data, error } = await supabase.functions.invoke('telegram-extract', {
-        body: { 
-          action,
-          group_link: groupLink,
-          account_id: selectedAccount,
-          include_hidden: includeHidden || extractionType === "group_members_hidden"
-        }
-      });
+      switch (extractionType) {
+        case "group_members":
+        case "group_members_hidden":
+          action = "group_members";
+          body = { 
+            action,
+            group_link: groupLink,
+            include_hidden: includeHidden || extractionType === "group_members_hidden"
+          };
+          break;
+        case "hidden_members_full":
+          body = { action, group_link: groupLink };
+          break;
+        case "last_seen":
+          body = { 
+            action,
+            usernames: usernamesList.split('\n').filter(u => u.trim())
+          };
+          break;
+        case "messenger_customers":
+          body = { 
+            action,
+            account_id: selectedAccount,
+            min_messages: parseInt(minMessages),
+            time_range: parseInt(timeRange)
+          };
+          break;
+        case "contacts_filtered":
+          body = { 
+            action,
+            account_id: selectedAccount,
+            phone_prefixes: phonePrefixes.split(',').map(p => p.trim()).filter(p => p),
+            country_codes: countryCodes.split(',').map(c => c.trim()).filter(c => c),
+            exclude_prefixes: excludePrefixes.split(',').map(p => p.trim()).filter(p => p)
+          };
+          break;
+        default:
+          body = { 
+            action: extractionType,
+            account_id: selectedAccount
+          };
+      }
+
+      const { data, error } = await supabase.functions.invoke('telegram-extract', { body });
 
       if (error) throw error;
 
@@ -111,9 +171,11 @@ export default function TelegramExtractor() {
       });
       
       setGroupLink("");
+      setUsernamesList("");
       fetchData();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -123,6 +185,9 @@ export default function TelegramExtractor() {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
+  const needsGroupLink = ["group_members", "group_members_hidden", "hidden_members_full"].includes(extractionType);
+  const needsAccount = ["chats", "contacts", "archived", "messenger_customers", "contacts_filtered"].includes(extractionType);
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -130,7 +195,7 @@ export default function TelegramExtractor() {
         <div className="max-w-6xl mx-auto space-y-8">
           <div>
             <h1 className="text-3xl font-bold">Telegram Extractor</h1>
-            <p className="text-muted-foreground mt-2">Extract members, chats, contacts, and archived content</p>
+            <p className="text-muted-foreground mt-2">Extract members, last-seen, customers, and filtered contacts</p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -162,7 +227,7 @@ export default function TelegramExtractor() {
                   </Select>
                 </div>
 
-                {(extractionType === "group_members" || extractionType === "group_members_hidden") && (
+                {needsGroupLink && (
                   <>
                     <div className="space-y-2">
                       <Label>Group Link or Username</Label>
@@ -172,14 +237,120 @@ export default function TelegramExtractor() {
                         onChange={(e) => setGroupLink(e.target.value)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <Label>Include Hidden Members (Premium)</Label>
-                      <Switch checked={includeHidden} onCheckedChange={setIncludeHidden} />
+                    {extractionType === "group_members" && (
+                      <div className="flex items-center justify-between">
+                        <Label>Include Hidden Members (Premium)</Label>
+                        <Switch checked={includeHidden} onCheckedChange={setIncludeHidden} />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {extractionType === "last_seen" && (
+                  <div className="space-y-2">
+                    <Label>Usernames or User IDs (one per line)</Label>
+                    <Textarea
+                      placeholder="@username1&#10;@username2&#10;123456789"
+                      rows={5}
+                      value={usernamesList}
+                      onChange={(e) => setUsernamesList(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {usernamesList.split('\n').filter(u => u.trim()).length} users to check
+                    </p>
+                  </div>
+                )}
+
+                {extractionType === "messenger_customers" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Account</Label>
+                      <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.account_name || account.phone_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Min Messages</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={minMessages}
+                          onChange={(e) => setMinMessages(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Time Range (days)</Label>
+                        <Select value={timeRange} onValueChange={setTimeRange}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">Last 7 days</SelectItem>
+                            <SelectItem value="30">Last 30 days</SelectItem>
+                            <SelectItem value="90">Last 90 days</SelectItem>
+                            <SelectItem value="365">Last year</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </>
                 )}
 
-                {(extractionType === "chats" || extractionType === "contacts" || extractionType === "archived") && (
+                {extractionType === "contacts_filtered" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Account</Label>
+                      <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.account_name || account.phone_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Include Phone Prefixes (comma-separated)</Label>
+                      <Input
+                        placeholder="+1, +44, +91"
+                        value={phonePrefixes}
+                        onChange={(e) => setPhonePrefixes(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Country Codes (comma-separated)</Label>
+                      <Input
+                        placeholder="+1, +44, +49"
+                        value={countryCodes}
+                        onChange={(e) => setCountryCodes(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Exclude Prefixes (comma-separated)</Label>
+                      <Input
+                        placeholder="+1900, +1800"
+                        value={excludePrefixes}
+                        onChange={(e) => setExcludePrefixes(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {needsAccount && extractionType !== "messenger_customers" && extractionType !== "contacts_filtered" && (
                   <div className="space-y-2">
                     <Label>Select Account</Label>
                     <Select value={selectedAccount} onValueChange={setSelectedAccount}>
@@ -211,7 +382,7 @@ export default function TelegramExtractor() {
                 <CardTitle>Extraction Types</CardTitle>
                 <CardDescription>Available extraction methods</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 max-h-[500px] overflow-y-auto">
                 {extractionTypes.map((type) => (
                   <div key={type.value} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                     <type.icon className="h-5 w-5 mt-0.5 text-primary" />
