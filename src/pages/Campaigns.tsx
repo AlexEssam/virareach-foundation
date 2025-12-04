@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,13 +24,15 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Rocket,
-  TrendingUp,
-  Zap,
   Target,
   Mail,
   Instagram,
-  Linkedin
+  Linkedin,
+  MoreHorizontal,
+  ArrowUpRight,
+  Activity,
+  Users,
+  Clock
 } from "lucide-react";
 import { SiPinterest, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { format } from "date-fns";
@@ -217,49 +220,25 @@ export default function Campaigns() {
 
   const getStatusConfig = (status: Campaign['status']) => {
     const configs = {
-      draft: { 
-        variant: 'outline' as const, 
-        icon: Edit, 
-        className: 'border-muted-foreground/30 text-muted-foreground' 
-      },
-      scheduled: { 
-        variant: 'secondary' as const, 
-        icon: Calendar, 
-        className: 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
-      },
-      running: { 
-        variant: 'default' as const, 
-        icon: Play, 
-        className: 'bg-primary/20 text-primary border-primary/30' 
-      },
-      paused: { 
-        variant: 'secondary' as const, 
-        icon: Pause, 
-        className: 'bg-muted text-muted-foreground' 
-      },
-      completed: { 
-        variant: 'default' as const, 
-        icon: CheckCircle2, 
-        className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-      },
-      failed: { 
-        variant: 'destructive' as const, 
-        icon: XCircle, 
-        className: 'bg-destructive/20 text-destructive border-destructive/30' 
-      },
+      draft: { label: 'Draft', color: 'bg-muted text-muted-foreground', icon: Edit },
+      scheduled: { label: 'Scheduled', color: 'bg-amber-500/10 text-amber-500', icon: Calendar },
+      running: { label: 'Running', color: 'bg-primary/10 text-primary', icon: Play },
+      paused: { label: 'Paused', color: 'bg-muted text-muted-foreground', icon: Pause },
+      completed: { label: 'Completed', color: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2 },
+      failed: { label: 'Failed', color: 'bg-destructive/10 text-destructive', icon: XCircle },
     };
     return configs[status] || configs.draft;
   };
 
   const getPlatformConfig = (platform: string) => {
-    const configs: Record<string, { icon: any; color: string; bg: string }> = {
-      email: { icon: Mail, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-      instagram: { icon: Instagram, color: 'text-pink-400', bg: 'bg-pink-500/10' },
-      linkedin: { icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-      pinterest: { icon: SiPinterest, color: 'text-red-400', bg: 'bg-red-500/10' },
-      snapchat: { icon: SiSnapchat, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+    const configs: Record<string, { icon: any; color: string; label: string }> = {
+      email: { icon: Mail, color: 'text-orange-500', label: 'Email' },
+      instagram: { icon: Instagram, color: 'text-pink-500', label: 'Instagram' },
+      linkedin: { icon: Linkedin, color: 'text-blue-500', label: 'LinkedIn' },
+      pinterest: { icon: SiPinterest, color: 'text-red-500', label: 'Pinterest' },
+      snapchat: { icon: SiSnapchat, color: 'text-yellow-500', label: 'Snapchat' },
     };
-    return configs[platform] || { icon: Mail, color: 'text-muted-foreground', bg: 'bg-muted' };
+    return configs[platform] || { icon: Mail, color: 'text-muted-foreground', label: platform };
   };
 
   const stats = {
@@ -272,28 +251,24 @@ export default function Campaigns() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <main className="flex-1 overflow-auto">
+        <div className="p-8 max-w-[1600px] mx-auto space-y-8">
           {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <h1 className="text-4xl font-bold tracking-tight">
-                <span className="text-gradient">Campaigns</span>
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Manage and track your marketing campaigns across platforms
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">Campaigns</h1>
+              <p className="text-muted-foreground mt-1">Manage and monitor your marketing campaigns</p>
             </div>
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="gradient-primary text-primary-foreground font-semibold shadow-lg hover:shadow-primary/25 transition-all">
-                  <Plus className="h-5 w-5 mr-2" />
+                <Button className="shrink-0">
+                  <Plus className="h-4 w-4 mr-2" />
                   New Campaign
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle className="text-xl">Create Campaign</DialogTitle>
+                  <DialogTitle>Create Campaign</DialogTitle>
                   <DialogDescription>
                     Set up a new marketing campaign to reach your audience
                   </DialogDescription>
@@ -305,7 +280,6 @@ export default function Campaigns() {
                       placeholder="e.g., Summer Sale Promo"
                       value={newCampaign.name}
                       onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                      className="h-11"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -315,7 +289,7 @@ export default function Campaigns() {
                         value={newCampaign.platform}
                         onValueChange={(value) => setNewCampaign({ ...newCampaign, platform: value })}
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -333,7 +307,7 @@ export default function Campaigns() {
                         value={newCampaign.type}
                         onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -351,15 +325,14 @@ export default function Campaigns() {
                       value={newCampaign.content}
                       onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
                       rows={4}
-                      className="resize-none"
                     />
                   </div>
                 </div>
-                <DialogFooter className="gap-2">
-                  <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={createCampaign} className="gradient-primary text-primary-foreground">
+                  <Button onClick={createCampaign}>
                     Create Campaign
                   </Button>
                 </DialogFooter>
@@ -367,63 +340,59 @@ export default function Campaigns() {
             </Dialog>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
-              <CardContent className="p-6 relative">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Campaigns</p>
-                    <p className="text-3xl font-bold">{stats.total}</p>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <BarChart3 className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent" />
-              <CardContent className="p-6 relative">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Running</p>
-                    <p className="text-3xl font-bold">{stats.running}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                    <Zap className="h-6 w-6 text-emerald-400" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-2xl font-semibold tracking-tight">{stats.total}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent" />
-              <CardContent className="p-6 relative">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                    <p className="text-3xl font-bold">{stats.completed}</p>
+            <Card className="border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Activity className="h-5 w-5 text-emerald-500" />
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-blue-400" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">Running</p>
+                    <p className="text-2xl font-semibold tracking-tight">{stats.running}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent" />
-              <CardContent className="p-6 relative">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Messages Sent</p>
-                    <p className="text-3xl font-bold">{stats.totalSent.toLocaleString()}</p>
+            <Card className="border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-blue-500" />
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Send className="h-6 w-6 text-purple-400" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">Completed</p>
+                    <p className="text-2xl font-semibold tracking-tight">{stats.completed}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                    <Send className="h-5 w-5 text-purple-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">Sent</p>
+                    <p className="text-2xl font-semibold tracking-tight">{stats.totalSent.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -431,129 +400,97 @@ export default function Campaigns() {
           </div>
 
           {/* Campaigns Table */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur">
-            <CardHeader className="border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">All Campaigns</CardTitle>
-                  <CardDescription>View and manage your marketing campaigns</CardDescription>
-                </div>
-                {campaigns.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {campaigns.length} total
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
+          <Card className="border-border/40">
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Loading campaigns...</p>
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : campaigns.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6">
-                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-                    <Rocket className="h-10 w-10 text-primary" />
+                <div className="flex flex-col items-center justify-center py-16 px-4">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Target className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <div className="text-center space-y-2 max-w-sm">
-                    <h3 className="text-xl font-semibold">No campaigns yet</h3>
-                    <p className="text-muted-foreground">
-                      Create your first campaign to start reaching your audience across multiple platforms.
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={() => setCreateDialogOpen(true)}
-                    className="gradient-primary text-primary-foreground font-semibold"
-                  >
+                  <h3 className="text-lg font-medium text-foreground mb-1">No campaigns yet</h3>
+                  <p className="text-muted-foreground text-sm text-center max-w-sm mb-4">
+                    Create your first campaign to start reaching your audience across platforms.
+                  </p>
+                  <Button onClick={() => setCreateDialogOpen(true)} variant="outline" size="sm">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Campaign
+                    Create Campaign
                   </Button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/50 hover:bg-transparent">
-                        <TableHead className="font-semibold">Campaign</TableHead>
-                        <TableHead className="font-semibold">Platform</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Progress</TableHead>
-                        <TableHead className="font-semibold">Created</TableHead>
-                        <TableHead className="text-right font-semibold">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {campaigns.map((campaign) => {
-                        const statusConfig = getStatusConfig(campaign.status);
-                        const platformConfig = getPlatformConfig(campaign.platform);
-                        const StatusIcon = statusConfig.icon;
-                        const PlatformIcon = platformConfig.icon;
-                        const progress = campaign.target_count 
-                          ? Math.round((campaign.sent_count / campaign.target_count) * 100) 
-                          : 0;
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/40">
+                      <TableHead className="w-[280px]">Campaign</TableHead>
+                      <TableHead>Platform</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Progress</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="w-[100px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaigns.map((campaign) => {
+                      const statusConfig = getStatusConfig(campaign.status);
+                      const platformConfig = getPlatformConfig(campaign.platform);
+                      const PlatformIcon = platformConfig.icon;
+                      const StatusIcon = statusConfig.icon;
+                      const progress = campaign.target_count > 0 
+                        ? Math.round((campaign.sent_count / campaign.target_count) * 100)
+                        : 0;
 
-                        return (
-                          <TableRow key={campaign.id} className="border-border/50 group">
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className={`h-10 w-10 rounded-lg ${platformConfig.bg} flex items-center justify-center shrink-0`}>
-                                  <PlatformIcon className={`h-5 w-5 ${platformConfig.color}`} />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-medium truncate">{campaign.name}</p>
-                                  <p className="text-xs text-muted-foreground capitalize">{campaign.type}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={`${platformConfig.bg} ${platformConfig.color} border-0 capitalize`}>
-                                {campaign.platform}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={statusConfig.variant} 
-                                className={`${statusConfig.className} flex items-center gap-1.5 w-fit`}
-                              >
-                                <StatusIcon className="h-3 w-3" />
-                                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3 min-w-[140px]">
-                                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                  <div 
-                                    className="h-full rounded-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500"
-                                    style={{ width: `${progress}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-muted-foreground font-medium tabular-nums w-16">
-                                  {campaign.sent_count}/{campaign.target_count}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(campaign.created_at), 'MMM d, yyyy')}
-                              </p>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                      return (
+                        <TableRow key={campaign.id} className="border-border/40">
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground">{campaign.name}</span>
+                              <span className="text-xs text-muted-foreground capitalize">{campaign.type}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <PlatformIcon className={`h-4 w-4 ${platformConfig.color}`} />
+                              <span className="text-sm">{platformConfig.label}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={`${statusConfig.color} border-0 font-medium`}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {statusConfig.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3 min-w-[140px]">
+                              <Progress value={progress} className="h-1.5 flex-1" />
+                              <span className="text-xs text-muted-foreground w-12 text-right">
+                                {campaign.sent_count}/{campaign.target_count}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span className="text-sm">{format(new Date(campaign.created_at), 'MMM d, yyyy')}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
