@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,14 +19,19 @@ import {
   Edit, 
   BarChart3,
   Send,
-  Users,
   Calendar,
-  Clock,
   CheckCircle2,
   XCircle,
   Loader2,
-  MessageSquare
+  Rocket,
+  TrendingUp,
+  Zap,
+  Target,
+  Mail,
+  Instagram,
+  Linkedin
 } from "lucide-react";
+import { SiPinterest, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { format } from "date-fns";
 
 interface Campaign {
@@ -52,7 +56,7 @@ export default function Campaigns() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newCampaign, setNewCampaign] = useState({
     name: '',
-    platform: 'facebook',
+    platform: 'email',
     type: 'message',
     content: '',
     scheduled_at: ''
@@ -67,7 +71,6 @@ export default function Campaigns() {
   const loadCampaigns = async () => {
     setLoading(true);
     try {
-      // Load from multiple campaign tables
       const [emailRes, instagramRes, linkedinRes, pinterestRes, snapchatRes] = await Promise.all([
         supabase.from('email_campaigns').select('*').eq('user_id', user?.id),
         supabase.from('instagram_campaigns').select('*').eq('user_id', user?.id),
@@ -78,7 +81,6 @@ export default function Campaigns() {
 
       const allCampaigns: Campaign[] = [];
 
-      // Map email campaigns
       emailRes.data?.forEach(c => allCampaigns.push({
         id: c.id,
         name: c.campaign_name,
@@ -93,7 +95,6 @@ export default function Campaigns() {
         content: c.content || ''
       }));
 
-      // Map instagram campaigns
       instagramRes.data?.forEach(c => allCampaigns.push({
         id: c.id,
         name: c.campaign_name,
@@ -108,7 +109,6 @@ export default function Campaigns() {
         content: c.content || ''
       }));
 
-      // Map linkedin campaigns
       linkedinRes.data?.forEach(c => allCampaigns.push({
         id: c.id,
         name: c.campaign_name,
@@ -123,7 +123,6 @@ export default function Campaigns() {
         content: c.content || ''
       }));
 
-      // Map pinterest campaigns
       pinterestRes.data?.forEach(c => allCampaigns.push({
         id: c.id,
         name: c.campaign_name,
@@ -138,7 +137,6 @@ export default function Campaigns() {
         content: c.content || ''
       }));
 
-      // Map snapchat campaigns
       snapchatRes.data?.forEach(c => allCampaigns.push({
         id: c.id,
         name: c.campaign_name,
@@ -153,7 +151,6 @@ export default function Campaigns() {
         content: c.content || ''
       }));
 
-      // Sort by created_at descending
       allCampaigns.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setCampaigns(allCampaigns);
     } catch (error) {
@@ -210,7 +207,7 @@ export default function Campaigns() {
 
       toast.success('Campaign created successfully!');
       setCreateDialogOpen(false);
-      setNewCampaign({ name: '', platform: 'facebook', type: 'message', content: '', scheduled_at: '' });
+      setNewCampaign({ name: '', platform: 'email', type: 'message', content: '', scheduled_at: '' });
       loadCampaigns();
     } catch (error: any) {
       console.error('Error creating campaign:', error);
@@ -218,43 +215,51 @@ export default function Campaigns() {
     }
   };
 
-  const getStatusBadge = (status: Campaign['status']) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any }> = {
-      draft: { variant: 'outline', icon: Edit },
-      scheduled: { variant: 'secondary', icon: Calendar },
-      running: { variant: 'default', icon: Play },
-      paused: { variant: 'secondary', icon: Pause },
-      completed: { variant: 'default', icon: CheckCircle2 },
-      failed: { variant: 'destructive', icon: XCircle },
+  const getStatusConfig = (status: Campaign['status']) => {
+    const configs = {
+      draft: { 
+        variant: 'outline' as const, 
+        icon: Edit, 
+        className: 'border-muted-foreground/30 text-muted-foreground' 
+      },
+      scheduled: { 
+        variant: 'secondary' as const, 
+        icon: Calendar, 
+        className: 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
+      },
+      running: { 
+        variant: 'default' as const, 
+        icon: Play, 
+        className: 'bg-primary/20 text-primary border-primary/30' 
+      },
+      paused: { 
+        variant: 'secondary' as const, 
+        icon: Pause, 
+        className: 'bg-muted text-muted-foreground' 
+      },
+      completed: { 
+        variant: 'default' as const, 
+        icon: CheckCircle2, 
+        className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+      },
+      failed: { 
+        variant: 'destructive' as const, 
+        icon: XCircle, 
+        className: 'bg-destructive/20 text-destructive border-destructive/30' 
+      },
     };
-    const config = variants[status] || variants.draft;
-    const Icon = config.icon;
-    
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
+    return configs[status] || configs.draft;
   };
 
-  const getPlatformBadge = (platform: string) => {
-    const colors: Record<string, string> = {
-      facebook: 'bg-blue-500/20 text-blue-500',
-      instagram: 'bg-pink-500/20 text-pink-500',
-      whatsapp: 'bg-green-500/20 text-green-500',
-      telegram: 'bg-sky-500/20 text-sky-500',
-      linkedin: 'bg-blue-700/20 text-blue-700',
-      email: 'bg-orange-500/20 text-orange-500',
-      pinterest: 'bg-red-500/20 text-red-500',
-      snapchat: 'bg-yellow-500/20 text-yellow-600',
+  const getPlatformConfig = (platform: string) => {
+    const configs: Record<string, { icon: any; color: string; bg: string }> = {
+      email: { icon: Mail, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+      instagram: { icon: Instagram, color: 'text-pink-400', bg: 'bg-pink-500/10' },
+      linkedin: { icon: Linkedin, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+      pinterest: { icon: SiPinterest, color: 'text-red-400', bg: 'bg-red-500/10' },
+      snapchat: { icon: SiSnapchat, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
     };
-    
-    return (
-      <Badge className={colors[platform] || 'bg-muted'}>
-        {platform.charAt(0).toUpperCase() + platform.slice(1)}
-      </Badge>
-    );
+    return configs[platform] || { icon: Mail, color: 'text-muted-foreground', bg: 'bg-muted' };
   };
 
   const stats = {
@@ -268,89 +273,93 @@ export default function Campaigns() {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <main className="flex-1 p-6 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <MessageSquare className="h-8 w-8 text-primary" />
-                Campaigns
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold tracking-tight">
+                <span className="text-gradient">Campaigns</span>
               </h1>
-              <p className="text-muted-foreground mt-2">
-                Manage all your marketing campaigns across platforms
+              <p className="text-muted-foreground text-lg">
+                Manage and track your marketing campaigns across platforms
               </p>
             </div>
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="lg" className="gradient-primary text-primary-foreground font-semibold shadow-lg hover:shadow-primary/25 transition-all">
+                  <Plus className="h-5 w-5 mr-2" />
                   New Campaign
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Create New Campaign</DialogTitle>
+                  <DialogTitle className="text-xl">Create Campaign</DialogTitle>
                   <DialogDescription>
-                    Set up a new marketing campaign
+                    Set up a new marketing campaign to reach your audience
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Campaign Name</label>
                     <Input
-                      placeholder="Enter campaign name"
+                      placeholder="e.g., Summer Sale Promo"
                       value={newCampaign.name}
                       onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                      className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Platform</label>
-                    <Select
-                      value={newCampaign.platform}
-                      onValueChange={(value) => setNewCampaign({ ...newCampaign, platform: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="linkedin">LinkedIn</SelectItem>
-                        <SelectItem value="pinterest">Pinterest</SelectItem>
-                        <SelectItem value="snapchat">Snapchat</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Platform</label>
+                      <Select
+                        value={newCampaign.platform}
+                        onValueChange={(value) => setNewCampaign({ ...newCampaign, platform: value })}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="email">Email</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
+                          <SelectItem value="pinterest">Pinterest</SelectItem>
+                          <SelectItem value="snapchat">Snapchat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Type</label>
+                      <Select
+                        value={newCampaign.type}
+                        onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="message">Direct Message</SelectItem>
+                          <SelectItem value="broadcast">Broadcast</SelectItem>
+                          <SelectItem value="followup">Follow-up</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Campaign Type</label>
-                    <Select
-                      value={newCampaign.type}
-                      onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="message">Direct Message</SelectItem>
-                        <SelectItem value="broadcast">Broadcast</SelectItem>
-                        <SelectItem value="followup">Follow-up</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Content</label>
+                    <label className="text-sm font-medium">Message Content</label>
                     <Textarea
-                      placeholder="Enter campaign message content..."
+                      placeholder="Write your campaign message here..."
                       value={newCampaign.content}
                       onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
                       rows={4}
+                      className="resize-none"
                     />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                <DialogFooter className="gap-2">
+                  <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={createCampaign}>
+                  <Button onClick={createCampaign} className="gradient-primary text-primary-foreground">
                     Create Campaign
                   </Button>
                 </DialogFooter>
@@ -359,55 +368,62 @@ export default function Campaigns() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <BarChart3 className="h-5 w-5 text-primary" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Total Campaigns</p>
+                    <p className="text-3xl font-bold">{stats.total}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Campaigns</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/10">
-                    <Play className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Running</p>
-                    <p className="text-2xl font-bold">{stats.running}</p>
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <CheckCircle2 className="h-5 w-5 text-blue-500" />
+
+            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Running</p>
+                    <p className="text-3xl font-bold">{stats.running}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold">{stats.completed}</p>
+                  <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <Zap className="h-6 w-6 text-emerald-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10">
-                    <Send className="h-5 w-5 text-purple-500" />
+
+            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                    <p className="text-3xl font-bold">{stats.completed}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Sent</p>
-                    <p className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</p>
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-blue-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-transparent" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Messages Sent</p>
+                    <p className="text-3xl font-bold">{stats.totalSent.toLocaleString()}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Send className="h-6 w-6 text-purple-400" />
                   </div>
                 </div>
               </CardContent>
@@ -415,76 +431,129 @@ export default function Campaigns() {
           </div>
 
           {/* Campaigns Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Campaigns</CardTitle>
-              <CardDescription>View and manage your campaigns</CardDescription>
+          <Card className="border-border/50 bg-card/50 backdrop-blur">
+            <CardHeader className="border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">All Campaigns</CardTitle>
+                  <CardDescription>View and manage your marketing campaigns</CardDescription>
+                </div>
+                {campaigns.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {campaigns.length} total
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Loading campaigns...</p>
                 </div>
               ) : campaigns.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">No campaigns yet</h3>
-                  <p className="text-muted-foreground mb-4">Create your first campaign to get started</p>
-                  <Button onClick={() => setCreateDialogOpen(true)}>
+                <div className="flex flex-col items-center justify-center py-16 px-4 space-y-6">
+                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                    <Rocket className="h-10 w-10 text-primary" />
+                  </div>
+                  <div className="text-center space-y-2 max-w-sm">
+                    <h3 className="text-xl font-semibold">No campaigns yet</h3>
+                    <p className="text-muted-foreground">
+                      Create your first campaign to start reaching your audience across multiple platforms.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setCreateDialogOpen(true)}
+                    className="gradient-primary text-primary-foreground font-semibold"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Campaign
+                    Create Your First Campaign
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Platform</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {campaigns.map((campaign) => (
-                      <TableRow key={campaign.id}>
-                        <TableCell className="font-medium">{campaign.name}</TableCell>
-                        <TableCell>{getPlatformBadge(campaign.platform)}</TableCell>
-                        <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-muted rounded-full h-2">
-                              <div 
-                                className="bg-primary h-2 rounded-full transition-all"
-                                style={{ 
-                                  width: `${campaign.target_count ? (campaign.sent_count / campaign.target_count) * 100 : 0}%` 
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {campaign.sent_count}/{campaign.target_count}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {format(new Date(campaign.created_at), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border/50 hover:bg-transparent">
+                        <TableHead className="font-semibold">Campaign</TableHead>
+                        <TableHead className="font-semibold">Platform</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Progress</TableHead>
+                        <TableHead className="font-semibold">Created</TableHead>
+                        <TableHead className="text-right font-semibold">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {campaigns.map((campaign) => {
+                        const statusConfig = getStatusConfig(campaign.status);
+                        const platformConfig = getPlatformConfig(campaign.platform);
+                        const StatusIcon = statusConfig.icon;
+                        const PlatformIcon = platformConfig.icon;
+                        const progress = campaign.target_count 
+                          ? Math.round((campaign.sent_count / campaign.target_count) * 100) 
+                          : 0;
+
+                        return (
+                          <TableRow key={campaign.id} className="border-border/50 group">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className={`h-10 w-10 rounded-lg ${platformConfig.bg} flex items-center justify-center shrink-0`}>
+                                  <PlatformIcon className={`h-5 w-5 ${platformConfig.color}`} />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{campaign.name}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">{campaign.type}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`${platformConfig.bg} ${platformConfig.color} border-0 capitalize`}>
+                                {campaign.platform}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={statusConfig.variant} 
+                                className={`${statusConfig.className} flex items-center gap-1.5 w-fit`}
+                              >
+                                <StatusIcon className="h-3 w-3" />
+                                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3 min-w-[140px]">
+                                <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-500"
+                                    style={{ width: `${progress}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground font-medium tabular-nums w-16">
+                                  {campaign.sent_count}/{campaign.target_count}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(campaign.created_at), 'MMM d, yyyy')}
+                              </p>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
