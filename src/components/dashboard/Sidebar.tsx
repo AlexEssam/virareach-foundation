@@ -107,6 +107,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Send, label: "Publishing", path: "/x/publishing" },
     { icon: Heart, label: "Auto-Interactions", path: "/x/interactions" },
     { icon: TrendingUp, label: "Trends Monitor", path: "/x/trends" },
+    { icon: Users, label: "Account Checker", path: "/x/accounts" },
+    { icon: BarChart3, label: "Bookmarks", path: "/x/bookmarks" },
+    { icon: Settings, label: "Tweet Monitor", path: "/x/monitor" },
   ];
 
   const telegramMenuItems = [

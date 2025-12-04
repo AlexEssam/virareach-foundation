@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Users, Heart, MessageCircle, TrendingUp, Target } from "lucide-react";
+import { Download, Users, Heart, MessageCircle, TrendingUp, Target, Mail } from "lucide-react";
 import { SiX } from "@icons-pack/react-simple-icons";
 
 export default function XExtractors() {
@@ -23,6 +23,8 @@ export default function XExtractors() {
     keywords: "",
     competitor_usernames: "",
     country_code: "US",
+    email_keywords: "",
+    min_followers: "1000",
   });
 
   const fetchExtractions = async () => {
@@ -63,6 +65,10 @@ export default function XExtractors() {
         case "competitor_customers":
           body.competitor_usernames = formData.competitor_usernames.split(",").map((s) => s.trim());
           break;
+        case "emails_by_interest":
+          body.keywords = formData.email_keywords.split(",").map((s) => s.trim());
+          body.filters = { min_followers: parseInt(formData.min_followers) };
+          break;
       }
 
       const { data, error } = await supabase.functions.invoke("x-extract", { body });
@@ -91,6 +97,7 @@ export default function XExtractors() {
     { id: "tweet_interactors", label: "Tweet Interactors", icon: Heart, description: "Extract likers, retweeters, commenters" },
     { id: "trends", label: "Trends", icon: TrendingUp, description: "Get trending topics by country" },
     { id: "competitor_customers", label: "Competitor Customers", icon: MessageCircle, description: "Extract competitor followers" },
+    { id: "emails_by_interest", label: "Emails by Interest", icon: Mail, description: "Extract customer emails by keywords" },
   ];
 
   return (
@@ -108,7 +115,7 @@ export default function XExtractors() {
           </div>
 
           <Tabs defaultValue="followers">
-            <TabsList className="grid grid-cols-5 h-auto">
+            <TabsList className="grid grid-cols-6 h-auto">
               {extractionTypes.map((type) => (
                 <TabsTrigger key={type.id} value={type.id} className="text-xs">
                   {type.label}
@@ -179,6 +186,28 @@ export default function XExtractors() {
                           onChange={(e) => setFormData({ ...formData, competitor_usernames: e.target.value })}
                           placeholder="competitor1, competitor2"
                         />
+                      </div>
+                    )}
+
+                    {type.id === "emails_by_interest" && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Keywords / Interests (comma separated)</Label>
+                          <Input
+                            value={formData.email_keywords}
+                            onChange={(e) => setFormData({ ...formData, email_keywords: e.target.value })}
+                            placeholder="marketing, SaaS, startup founder"
+                          />
+                        </div>
+                        <div>
+                          <Label>Min Followers</Label>
+                          <Input
+                            type="number"
+                            value={formData.min_followers}
+                            onChange={(e) => setFormData({ ...formData, min_followers: e.target.value })}
+                            placeholder="1000"
+                          />
+                        </div>
                       </div>
                     )}
 
