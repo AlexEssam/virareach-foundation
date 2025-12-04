@@ -785,6 +785,279 @@ export type Database = {
           },
         ]
       }
+      x_accounts: {
+        Row: {
+          access_token: string | null
+          access_token_secret: string | null
+          account_name: string | null
+          api_key: string | null
+          api_secret: string | null
+          created_at: string
+          daily_follow_count: number | null
+          daily_like_count: number | null
+          daily_tweet_count: number | null
+          followers_count: number | null
+          following_count: number | null
+          id: string
+          last_action_at: string | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          status: string
+          tweets_count: number | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          account_name?: string | null
+          api_key?: string | null
+          api_secret?: string | null
+          created_at?: string
+          daily_follow_count?: number | null
+          daily_like_count?: number | null
+          daily_tweet_count?: number | null
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          tweets_count?: number | null
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_secret?: string | null
+          account_name?: string | null
+          api_key?: string | null
+          api_secret?: string | null
+          created_at?: string
+          daily_follow_count?: number | null
+          daily_like_count?: number | null
+          daily_tweet_count?: number | null
+          followers_count?: number | null
+          following_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          tweets_count?: number | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      x_extractions: {
+        Row: {
+          completed_at: string | null
+          country_code: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          result_count: number | null
+          results: Json | null
+          source: string | null
+          source_username: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          country_code?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          source_username?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          country_code?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          result_count?: number | null
+          results?: Json | null
+          source?: string | null
+          source_username?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      x_interactions: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          executed_at: string | null
+          id: string
+          interaction_type: string
+          status: string
+          target_id: string | null
+          target_tweet_id: string | null
+          target_username: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          interaction_type: string
+          status?: string
+          target_id?: string | null
+          target_tweet_id?: string | null
+          target_username?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          interaction_type?: string
+          status?: string
+          target_id?: string | null
+          target_tweet_id?: string | null
+          target_username?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_interactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "x_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "x_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      x_trends: {
+        Row: {
+          country_code: string
+          fetched_at: string
+          id: string
+          trends: Json | null
+          user_id: string
+        }
+        Insert: {
+          country_code: string
+          fetched_at?: string
+          id?: string
+          trends?: Json | null
+          user_id: string
+        }
+        Update: {
+          country_code?: string
+          fetched_at?: string
+          id?: string
+          trends?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_trends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      x_tweets: {
+        Row: {
+          account_id: string | null
+          content: string
+          created_at: string
+          id: string
+          media_urls: string[] | null
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          tweet_id: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          media_urls?: string[] | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tweet_id?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          media_urls?: string[] | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tweet_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_tweets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "x_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "x_tweets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
