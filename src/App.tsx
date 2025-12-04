@@ -78,6 +78,7 @@ import GoogleMapsReviews from "./pages/googlemaps/GoogleMapsReviews";
 import AIImageModule from "./pages/ai/AIImageModule";
 import AIVideoModule from "./pages/ai/AIVideoModule";
 import AITextModule from "./pages/ai/AITextModule";
+import AIAudioModule from "./pages/ai/AIAudioModule";
 import Campaigns from "./pages/Campaigns";
 import Points from "./pages/Points";
 import License from "./pages/License";
@@ -172,6 +173,7 @@ const App = () => (
             <Route path="/ai/image" element={<AIImageModule />} />
             <Route path="/ai/video" element={<AIVideoModule />} />
             <Route path="/ai/text" element={<AITextModule />} />
+            <Route path="/ai/audio" element={<AIAudioModule />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
