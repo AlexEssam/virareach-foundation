@@ -535,6 +535,251 @@ export type Database = {
           },
         ]
       }
+      google_maps_businesses: {
+        Row: {
+          address: string | null
+          business_name: string
+          category: string | null
+          created_at: string
+          email: string | null
+          extraction_id: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          opening_hours: Json | null
+          phone_number: string | null
+          place_id: string | null
+          rating: number | null
+          review_count: number | null
+          social_links: Json | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          extraction_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          opening_hours?: Json | null
+          phone_number?: string | null
+          place_id?: string | null
+          rating?: number | null
+          review_count?: number | null
+          social_links?: Json | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          extraction_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          opening_hours?: Json | null
+          phone_number?: string | null
+          place_id?: string | null
+          rating?: number | null
+          review_count?: number | null
+          social_links?: Json | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_maps_businesses_extraction_id_fkey"
+            columns: ["extraction_id"]
+            isOneToOne: false
+            referencedRelation: "google_maps_extractions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_maps_businesses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_maps_extractions: {
+        Row: {
+          city: string | null
+          completed_at: string | null
+          country: string | null
+          created_at: string
+          extraction_name: string
+          extraction_type: string
+          id: string
+          niche: string | null
+          result_count: number | null
+          results: Json | null
+          search_query: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          extraction_name: string
+          extraction_type: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          search_query?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string
+          extraction_name?: string
+          extraction_type?: string
+          id?: string
+          niche?: string | null
+          result_count?: number | null
+          results?: Json | null
+          search_query?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_maps_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_maps_review_generations: {
+        Row: {
+          business_id: string | null
+          business_name: string
+          business_url: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          posted_at: string | null
+          rating: number
+          review_text: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          business_id?: string | null
+          business_name: string
+          business_url?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          posted_at?: string | null
+          rating?: number
+          review_text: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string | null
+          business_name?: string
+          business_url?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          posted_at?: string | null
+          rating?: number
+          review_text?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_maps_review_generations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "google_maps_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_maps_review_generations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_maps_reviews: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          id: string
+          rating: number | null
+          response_text: string | null
+          review_date: string | null
+          review_id: string | null
+          review_text: string | null
+          reviewer_name: string | null
+          reviewer_profile_url: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          rating?: number | null
+          response_text?: string | null
+          review_date?: string | null
+          review_id?: string | null
+          review_text?: string | null
+          reviewer_name?: string | null
+          reviewer_profile_url?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          rating?: number | null
+          response_text?: string | null
+          review_date?: string | null
+          review_id?: string | null
+          review_text?: string | null
+          reviewer_name?: string | null
+          reviewer_profile_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_maps_reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "google_maps_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_maps_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_accounts: {
         Row: {
           account_name: string | null

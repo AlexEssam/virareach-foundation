@@ -72,6 +72,9 @@ import VKAccounts from "./pages/vk/VKAccounts";
 import VKExtractor from "./pages/vk/VKExtractor";
 import VKMessaging from "./pages/vk/VKMessaging";
 import VKCommunities from "./pages/vk/VKCommunities";
+import GoogleMapsExtractor from "./pages/googlemaps/GoogleMapsExtractor";
+import GoogleMapsBusinesses from "./pages/googlemaps/GoogleMapsBusinesses";
+import GoogleMapsReviews from "./pages/googlemaps/GoogleMapsReviews";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -152,6 +155,9 @@ const App = () => (
             <Route path="/vk/extractor" element={<VKExtractor />} />
             <Route path="/vk/messaging" element={<VKMessaging />} />
             <Route path="/vk/communities" element={<VKCommunities />} />
+            <Route path="/googlemaps/extractor" element={<GoogleMapsExtractor />} />
+            <Route path="/googlemaps/businesses" element={<GoogleMapsBusinesses />} />
+            <Route path="/googlemaps/reviews" element={<GoogleMapsReviews />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

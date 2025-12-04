@@ -24,7 +24,8 @@ import {
   FileText,
   Database,
   Smartphone,
-  AtSign
+  AtSign,
+  MapPin
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest, SiReddit, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -51,6 +52,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [redditOpen, setRedditOpen] = useState(location.pathname.startsWith("/reddit"));
   const [snapchatOpen, setSnapchatOpen] = useState(location.pathname.startsWith("/snapchat"));
   const [vkOpen, setVkOpen] = useState(location.pathname.startsWith("/vk"));
+  const [googleMapsOpen, setGoogleMapsOpen] = useState(location.pathname.startsWith("/googlemaps"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -71,6 +73,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isRedditActive = location.pathname.startsWith("/reddit");
   const isSnapchatActive = location.pathname.startsWith("/snapchat");
   const isVkActive = location.pathname.startsWith("/vk");
+  const isGoogleMapsActive = location.pathname.startsWith("/googlemaps");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -181,6 +184,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/vk/extractor" },
     { icon: Send, label: "Messaging", path: "/vk/messaging" },
     { icon: Users, label: "Communities", path: "/vk/communities" },
+  ];
+
+  const googleMapsMenuItems = [
+    { icon: Download, label: "Extractor", path: "/googlemaps/extractor" },
+    { icon: Database, label: "Businesses", path: "/googlemaps/businesses" },
+    { icon: BarChart3, label: "Reviews", path: "/googlemaps/reviews" },
   ];
 
   return (
@@ -714,6 +723,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/vk/accounts")}
           >
             <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">VK</div>
+          </Button>
+        )}
+
+        {/* Google Maps Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={googleMapsOpen} onOpenChange={setGoogleMapsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isGoogleMapsActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 shrink-0 text-[#EA4335]" />
+                  <span>Google Maps</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${googleMapsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {googleMapsMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isGoogleMapsActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/googlemaps/extractor")}
+          >
+            <MapPin className="h-5 w-5 shrink-0 text-[#EA4335]" />
           </Button>
         )}
       </nav>
