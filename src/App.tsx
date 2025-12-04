@@ -36,6 +36,7 @@ import XTrends from "./pages/x/XTrends";
 import XAccounts from "./pages/x/XAccounts";
 import XBookmarks from "./pages/x/XBookmarks";
 import XTweetMonitor from "./pages/x/XTweetMonitor";
+import XAccountManager from "./pages/x/XAccountManager";
 import TelegramExtractor from "./pages/telegram/TelegramExtractor";
 import TelegramSender from "./pages/telegram/TelegramSender";
 import TelegramGroups from "./pages/telegram/TelegramGroups";
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/instagram/messaging" element={<InstagramMessaging />} />
             <Route path="/instagram/analytics" element={<InstagramAnalytics />} />
             <Route path="/instagram/mentions" element={<InstagramMentions />} />
+            <Route path="/x/manager" element={<XAccountManager />} />
             <Route path="/x/extractors" element={<XExtractors />} />
             <Route path="/x/publishing" element={<XPublishing />} />
             <Route path="/x/interactions" element={<XInteractions />} />
