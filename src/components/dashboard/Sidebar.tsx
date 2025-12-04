@@ -17,7 +17,7 @@ import {
   Send,
   BarChart3
 } from "lucide-react";
-import { SiFacebook } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -30,6 +30,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [facebookOpen, setFacebookOpen] = useState(location.pathname.startsWith("/facebook"));
+  const [whatsappOpen, setWhatsappOpen] = useState(location.pathname.startsWith("/whatsapp"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -38,6 +39,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
   const isActive = (path: string) => location.pathname === path;
   const isFacebookActive = location.pathname.startsWith("/facebook");
+  const isWhatsappActive = location.pathname.startsWith("/whatsapp");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -52,6 +54,12 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/facebook/extractor" },
     { icon: Send, label: "Publisher", path: "/facebook/publisher" },
     { icon: BarChart3, label: "Group Analyzer", path: "/facebook/analyzer" },
+  ];
+
+  const whatsappMenuItems = [
+    { icon: Send, label: "Sending", path: "/whatsapp/sending" },
+    { icon: Download, label: "Extractor", path: "/whatsapp/extractor" },
+    { icon: Users, label: "Groups", path: "/whatsapp/groups" },
   ];
 
   return (
@@ -117,6 +125,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/facebook/accounts")}
           >
             <SiFacebook className="h-5 w-5 shrink-0" color="#1877F2" />
+          </Button>
+        )}
+
+        {/* WhatsApp Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={whatsappOpen} onOpenChange={setWhatsappOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isWhatsappActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiWhatsapp className="h-5 w-5 shrink-0" color="#25D366" />
+                  <span>WhatsApp Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${whatsappOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {whatsappMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isWhatsappActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/whatsapp/sending")}
+          >
+            <SiWhatsapp className="h-5 w-5 shrink-0" color="#25D366" />
           </Button>
         )}
       </nav>
