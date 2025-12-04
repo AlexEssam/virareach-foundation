@@ -33,6 +33,18 @@ verify_jwt = true
 [functions.whatsapp-groups]
 verify_jwt = true
 
+[functions.whatsapp-contacts]
+verify_jwt = true
+
+[functions.whatsapp-autoreply]
+verify_jwt = true
+
+[functions.whatsapp-scheduler]
+verify_jwt = true
+
+[functions.whatsapp-discover]
+verify_jwt = true
+
 [functions.instagram-accounts]
 verify_jwt = true
 

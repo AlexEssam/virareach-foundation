@@ -84,6 +84,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Send, label: "Sending", path: "/whatsapp/sending" },
     { icon: Download, label: "Extractor", path: "/whatsapp/extractor" },
     { icon: Users, label: "Groups", path: "/whatsapp/groups" },
+    { icon: Users, label: "Contacts", path: "/whatsapp/contacts" },
+    { icon: MessageSquare, label: "Auto-Reply", path: "/whatsapp/autoreply" },
+    { icon: BarChart3, label: "Scheduler", path: "/whatsapp/scheduler" },
+    { icon: TrendingUp, label: "Discover Groups", path: "/whatsapp/discover" },
   ];
 
   const instagramMenuItems = [
