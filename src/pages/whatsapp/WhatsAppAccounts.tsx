@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +72,12 @@ export default function WhatsAppAccounts() {
     switchAfter: 50,
     cooldownMinutes: 30,
   });
+
+  // Generate stable QR pattern
+  const qrPattern = useMemo(() => 
+    Array.from({ length: 64 }).map(() => Math.random() > 0.5),
+    [addDialogOpen]
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -305,10 +311,10 @@ export default function WhatsAppAccounts() {
                             <>
                               {/* Simulated QR Code Pattern */}
                               <div className="w-full h-full grid grid-cols-8 gap-1">
-                                {Array.from({ length: 64 }).map((_, i) => (
+                                {qrPattern.map((isDark, i) => (
                                   <div 
                                     key={i} 
-                                    className={`rounded-sm ${Math.random() > 0.5 ? 'bg-gray-900' : 'bg-white'}`}
+                                    className={`rounded-sm ${isDark ? 'bg-gray-900' : 'bg-white'}`}
                                   />
                                 ))}
                               </div>
