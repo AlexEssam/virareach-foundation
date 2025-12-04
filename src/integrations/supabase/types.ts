@@ -1535,6 +1535,364 @@ export type Database = {
         }
         Relationships: []
       }
+      reddit_accounts: {
+        Row: {
+          account_name: string | null
+          comment_karma: number | null
+          created_at: string
+          daily_join_count: number | null
+          daily_post_count: number | null
+          daily_upvote_count: number | null
+          id: string
+          karma: number | null
+          last_action_at: string | null
+          post_karma: number | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          session_data: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          account_name?: string | null
+          comment_karma?: number | null
+          created_at?: string
+          daily_join_count?: number | null
+          daily_post_count?: number | null
+          daily_upvote_count?: number | null
+          id?: string
+          karma?: number | null
+          last_action_at?: string | null
+          post_karma?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          account_name?: string | null
+          comment_karma?: number | null
+          created_at?: string
+          daily_join_count?: number | null
+          daily_post_count?: number | null
+          daily_upvote_count?: number | null
+          id?: string
+          karma?: number | null
+          last_action_at?: string | null
+          post_karma?: number | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          session_data?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reddit_communities: {
+        Row: {
+          account_id: string | null
+          active_users: number | null
+          category: string | null
+          created_at: string
+          description: string | null
+          display_name: string | null
+          id: string
+          is_joined: boolean | null
+          is_nsfw: boolean | null
+          joined_at: string | null
+          status: string
+          subreddit_name: string
+          subscribers: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          active_users?: number | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string | null
+          id?: string
+          is_joined?: boolean | null
+          is_nsfw?: boolean | null
+          joined_at?: string | null
+          status?: string
+          subreddit_name: string
+          subscribers?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          active_users?: number | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string | null
+          id?: string
+          is_joined?: boolean | null
+          is_nsfw?: boolean | null
+          joined_at?: string | null
+          status?: string
+          subreddit_name?: string
+          subscribers?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_communities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "reddit_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reddit_communities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reddit_extractions: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          keyword: string | null
+          result_count: number | null
+          results: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          keyword?: string | null
+          result_count?: number | null
+          results?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          keyword?: string | null
+          result_count?: number | null
+          results?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reddit_posts: {
+        Row: {
+          account_id: string | null
+          content: string | null
+          created_at: string
+          flair: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          post_type: string
+          published_at: string | null
+          reddit_post_id: string | null
+          scheduled_at: string | null
+          status: string
+          subreddit: string
+          title: string
+          upvotes: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          flair?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          reddit_post_id?: string | null
+          scheduled_at?: string | null
+          status?: string
+          subreddit: string
+          title: string
+          upvotes?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          flair?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          post_type?: string
+          published_at?: string | null
+          reddit_post_id?: string | null
+          scheduled_at?: string | null
+          status?: string
+          subreddit?: string
+          title?: string
+          upvotes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "reddit_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reddit_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reddit_saved: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          post_title: string | null
+          post_url: string
+          saved_at: string | null
+          status: string
+          subreddit: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          post_title?: string | null
+          post_url: string
+          saved_at?: string | null
+          status?: string
+          subreddit?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          post_title?: string | null
+          post_url?: string
+          saved_at?: string | null
+          status?: string
+          subreddit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_saved_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "reddit_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reddit_saved_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reddit_upvotes: {
+        Row: {
+          account_id: string | null
+          action_type: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          status: string
+          target_post_url: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          action_type?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_post_url: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          action_type?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          status?: string
+          target_post_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_upvotes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "reddit_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reddit_upvotes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_accounts: {
         Row: {
           account_name: string | null

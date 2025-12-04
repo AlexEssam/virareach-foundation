@@ -26,7 +26,7 @@ import {
   Smartphone,
   AtSign
 } from "lucide-react";
-import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest, SiReddit } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -48,6 +48,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [b2bOpen, setB2bOpen] = useState(location.pathname.startsWith("/b2b"));
   const [tiktokOpen, setTiktokOpen] = useState(location.pathname.startsWith("/tiktok"));
   const [pinterestOpen, setPinterestOpen] = useState(location.pathname.startsWith("/pinterest"));
+  const [redditOpen, setRedditOpen] = useState(location.pathname.startsWith("/reddit"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,6 +66,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isB2BActive = location.pathname.startsWith("/b2b");
   const isTiktokActive = location.pathname.startsWith("/tiktok");
   const isPinterestActive = location.pathname.startsWith("/pinterest");
+  const isRedditActive = location.pathname.startsWith("/reddit");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -155,6 +157,13 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Send, label: "Messaging", path: "/pinterest/messaging" },
     { icon: TrendingUp, label: "Publisher", path: "/pinterest/publisher" },
     { icon: BarChart3, label: "Boards", path: "/pinterest/boards" },
+  ];
+
+  const redditMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/reddit/accounts" },
+    { icon: Users, label: "Communities", path: "/reddit/communities" },
+    { icon: Heart, label: "Upvotes & Saves", path: "/reddit/upvotes" },
+    { icon: Send, label: "Publisher", path: "/reddit/publisher" },
   ];
 
   return (
@@ -532,6 +541,84 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/b2b/data-center")}
           >
             <Database className="h-5 w-5 shrink-0 text-[#10B981]" />
+          </Button>
+        )}
+
+        {/* Pinterest Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={pinterestOpen} onOpenChange={setPinterestOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isPinterestActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiPinterest className="h-5 w-5 shrink-0" color="#E60023" />
+                  <span>Pinterest Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${pinterestOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {pinterestMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isPinterestActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/pinterest/accounts")}
+          >
+            <SiPinterest className="h-5 w-5 shrink-0" color="#E60023" />
+          </Button>
+        )}
+
+        {/* Reddit Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={redditOpen} onOpenChange={setRedditOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isRedditActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiReddit className="h-5 w-5 shrink-0" color="#FF4500" />
+                  <span>Reddit Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${redditOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {redditMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isRedditActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/reddit/accounts")}
+          >
+            <SiReddit className="h-5 w-5 shrink-0" color="#FF4500" />
           </Button>
         )}
       </nav>
