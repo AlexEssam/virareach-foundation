@@ -241,6 +241,47 @@ Deno.serve(async (req) => {
         })
       }
 
+      case 'emails_by_interest': {
+        const { keywords, filters } = params
+        
+        const { data, error } = await supabase
+          .from('x_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'emails_by_interest',
+            source: keywords.join(', '),
+            status: 'processing'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const mockResults = Array.from({ length: 75 }, (_, i) => ({
+          username: `user_${i + 1}`,
+          display_name: `User ${i + 1}`,
+          email: `user${i + 1}@example.com`,
+          bio: `Interested in ${keywords[0]}`,
+          followers_count: Math.floor(Math.random() * 50000),
+          verified: Math.random() > 0.9,
+          location: ['USA', 'UK', 'Canada', 'Germany'][Math.floor(Math.random() * 4)]
+        }))
+
+        await supabase
+          .from('x_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id)
+
+        return new Response(JSON.stringify({ extraction: { ...data, results: mockResults, result_count: mockResults.length } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
       case 'list': {
         const { data, error } = await supabase
           .from('x_extractions')
