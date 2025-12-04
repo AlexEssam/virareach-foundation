@@ -2665,6 +2665,310 @@ export type Database = {
         }
         Relationships: []
       }
+      vk_accounts: {
+        Row: {
+          access_token: string | null
+          account_name: string | null
+          created_at: string
+          daily_friend_request_count: number | null
+          daily_message_count: number | null
+          friends_count: number | null
+          id: string
+          last_action_at: string | null
+          proxy_host: string | null
+          proxy_password: string | null
+          proxy_port: number | null
+          proxy_username: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          username: string | null
+          vk_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_name?: string | null
+          created_at?: string
+          daily_friend_request_count?: number | null
+          daily_message_count?: number | null
+          friends_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          vk_id: string
+        }
+        Update: {
+          access_token?: string | null
+          account_name?: string | null
+          created_at?: string
+          daily_friend_request_count?: number | null
+          daily_message_count?: number | null
+          friends_count?: number | null
+          id?: string
+          last_action_at?: string | null
+          proxy_host?: string | null
+          proxy_password?: string | null
+          proxy_port?: number | null
+          proxy_username?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          vk_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vk_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vk_campaigns: {
+        Row: {
+          account_id: string | null
+          campaign_name: string
+          campaign_type: string
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          failed_count: number | null
+          id: string
+          max_interval: number | null
+          min_interval: number | null
+          recipients: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          campaign_name: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          min_interval?: number | null
+          recipients?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          campaign_name?: string
+          campaign_type?: string
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          max_interval?: number | null
+          min_interval?: number | null
+          recipients?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vk_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "vk_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vk_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vk_communities: {
+        Row: {
+          account_id: string | null
+          community_name: string
+          community_type: string | null
+          community_vk_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_joined: boolean | null
+          joined_at: string | null
+          member_count: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          community_name: string
+          community_type?: string | null
+          community_vk_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_joined?: boolean | null
+          joined_at?: string | null
+          member_count?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          community_name?: string
+          community_type?: string | null
+          community_vk_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_joined?: boolean | null
+          joined_at?: string | null
+          member_count?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vk_communities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "vk_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vk_communities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vk_extractions: {
+        Row: {
+          city: string | null
+          community_id: string | null
+          completed_at: string | null
+          created_at: string
+          extraction_type: string
+          id: string
+          interests: string | null
+          result_count: number | null
+          results: Json | null
+          source_user_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          community_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type: string
+          id?: string
+          interests?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source_user_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          community_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extraction_type?: string
+          id?: string
+          interests?: string | null
+          result_count?: number | null
+          results?: Json | null
+          source_user_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vk_extractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vk_friend_requests: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          message: string | null
+          sent_at: string | null
+          status: string
+          target_name: string | null
+          target_vk_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          sent_at?: string | null
+          status?: string
+          target_name?: string | null
+          target_vk_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          sent_at?: string | null
+          status?: string
+          target_name?: string | null
+          target_vk_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vk_friend_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "vk_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vk_friend_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_accounts: {
         Row: {
           account_name: string | null

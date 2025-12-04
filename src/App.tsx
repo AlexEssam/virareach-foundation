@@ -68,6 +68,10 @@ import RedditPublisher from "./pages/reddit/RedditPublisher";
 import SnapchatAccounts from "./pages/snapchat/SnapchatAccounts";
 import SnapchatExtractor from "./pages/snapchat/SnapchatExtractor";
 import SnapchatMessaging from "./pages/snapchat/SnapchatMessaging";
+import VKAccounts from "./pages/vk/VKAccounts";
+import VKExtractor from "./pages/vk/VKExtractor";
+import VKMessaging from "./pages/vk/VKMessaging";
+import VKCommunities from "./pages/vk/VKCommunities";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -144,6 +148,10 @@ const App = () => (
             <Route path="/snapchat/accounts" element={<SnapchatAccounts />} />
             <Route path="/snapchat/extractor" element={<SnapchatExtractor />} />
             <Route path="/snapchat/messaging" element={<SnapchatMessaging />} />
+            <Route path="/vk/accounts" element={<VKAccounts />} />
+            <Route path="/vk/extractor" element={<VKExtractor />} />
+            <Route path="/vk/messaging" element={<VKMessaging />} />
+            <Route path="/vk/communities" element={<VKCommunities />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
