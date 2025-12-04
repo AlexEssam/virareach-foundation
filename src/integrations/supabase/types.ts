@@ -785,7 +785,9 @@ export type Database = {
       }
       instagram_accounts: {
         Row: {
+          account_email: string | null
           account_name: string | null
+          account_password: string | null
           created_at: string
           daily_dm_count: number | null
           daily_follow_count: number | null
@@ -806,7 +808,9 @@ export type Database = {
           username: string
         }
         Insert: {
+          account_email?: string | null
           account_name?: string | null
+          account_password?: string | null
           created_at?: string
           daily_dm_count?: number | null
           daily_follow_count?: number | null
@@ -827,7 +831,9 @@ export type Database = {
           username: string
         }
         Update: {
+          account_email?: string | null
           account_name?: string | null
+          account_password?: string | null
           created_at?: string
           daily_dm_count?: number | null
           daily_follow_count?: number | null
