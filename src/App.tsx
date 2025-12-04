@@ -42,6 +42,7 @@ import TelegramExtractor from "./pages/telegram/TelegramExtractor";
 import TelegramSender from "./pages/telegram/TelegramSender";
 import TelegramGroups from "./pages/telegram/TelegramGroups";
 import TelegramGroupMarketing from "./pages/telegram/TelegramGroupMarketing";
+import TelegramAccountManager from "./pages/telegram/TelegramAccountManager";
 import LinkedInExtract from "./pages/linkedin/LinkedInExtract";
 import LinkedInMessaging from "./pages/linkedin/LinkedInMessaging";
 import LinkedInAnalysis from "./pages/linkedin/LinkedInAnalysis";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/x/bookmarks" element={<XBookmarks />} />
             <Route path="/x/monitor" element={<XTweetMonitor />} />
             <Route path="/x/plus" element={<XPlus />} />
+            <Route path="/telegram/accounts" element={<TelegramAccountManager />} />
             <Route path="/telegram/extractor" element={<TelegramExtractor />} />
             <Route path="/telegram/sender" element={<TelegramSender />} />
             <Route path="/telegram/groups" element={<TelegramGroups />} />
