@@ -12,6 +12,9 @@ import FacebookAccounts from "./pages/facebook/FacebookAccounts";
 import FacebookExtractor from "./pages/facebook/FacebookExtractor";
 import FacebookPublisher from "./pages/facebook/FacebookPublisher";
 import FacebookGroupAnalyzer from "./pages/facebook/FacebookGroupAnalyzer";
+import WhatsAppSending from "./pages/whatsapp/WhatsAppSending";
+import WhatsAppExtractor from "./pages/whatsapp/WhatsAppExtractor";
+import WhatsAppGroups from "./pages/whatsapp/WhatsAppGroups";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,9 @@ const App = () => (
             <Route path="/facebook/extractor" element={<FacebookExtractor />} />
             <Route path="/facebook/publisher" element={<FacebookPublisher />} />
             <Route path="/facebook/analyzer" element={<FacebookGroupAnalyzer />} />
+            <Route path="/whatsapp/sending" element={<WhatsAppSending />} />
+            <Route path="/whatsapp/extractor" element={<WhatsAppExtractor />} />
+            <Route path="/whatsapp/groups" element={<WhatsAppGroups />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
