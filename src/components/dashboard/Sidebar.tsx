@@ -118,6 +118,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/telegram/extractor" },
     { icon: Send, label: "Sender", path: "/telegram/sender" },
     { icon: Users, label: "Group Manager", path: "/telegram/groups" },
+    { icon: TrendingUp, label: "Group Marketing", path: "/telegram/marketing" },
   ];
 
   const linkedinMenuItems = [
