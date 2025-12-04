@@ -19,6 +19,10 @@ import InstagramAccounts from "./pages/instagram/InstagramAccounts";
 import InstagramExtractor from "./pages/instagram/InstagramExtractor";
 import InstagramFollow from "./pages/instagram/InstagramFollow";
 import InstagramMessaging from "./pages/instagram/InstagramMessaging";
+import XExtractors from "./pages/x/XExtractors";
+import XPublishing from "./pages/x/XPublishing";
+import XInteractions from "./pages/x/XInteractions";
+import XTrends from "./pages/x/XTrends";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +50,10 @@ const App = () => (
             <Route path="/instagram/extractor" element={<InstagramExtractor />} />
             <Route path="/instagram/follow" element={<InstagramFollow />} />
             <Route path="/instagram/messaging" element={<InstagramMessaging />} />
+            <Route path="/x/extractors" element={<XExtractors />} />
+            <Route path="/x/publishing" element={<XPublishing />} />
+            <Route path="/x/interactions" element={<XInteractions />} />
+            <Route path="/x/trends" element={<XTrends />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -16,9 +16,11 @@ import {
   Download,
   Send,
   BarChart3,
-  UserPlus
+  UserPlus,
+  TrendingUp,
+  Heart
 } from "lucide-react";
-import { SiFacebook, SiWhatsapp, SiInstagram } from "@icons-pack/react-simple-icons";
+import { SiFacebook, SiWhatsapp, SiInstagram, SiX } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SidebarProps {
@@ -33,6 +35,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [facebookOpen, setFacebookOpen] = useState(location.pathname.startsWith("/facebook"));
   const [whatsappOpen, setWhatsappOpen] = useState(location.pathname.startsWith("/whatsapp"));
   const [instagramOpen, setInstagramOpen] = useState(location.pathname.startsWith("/instagram"));
+  const [xOpen, setXOpen] = useState(location.pathname.startsWith("/x"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -43,6 +46,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isFacebookActive = location.pathname.startsWith("/facebook");
   const isWhatsappActive = location.pathname.startsWith("/whatsapp");
   const isInstagramActive = location.pathname.startsWith("/instagram");
+  const isXActive = location.pathname.startsWith("/x");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -70,6 +74,13 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Download, label: "Extractor", path: "/instagram/extractor" },
     { icon: UserPlus, label: "Follow/Unfollow", path: "/instagram/follow" },
     { icon: Send, label: "Messaging", path: "/instagram/messaging" },
+  ];
+
+  const xMenuItems = [
+    { icon: Download, label: "Extractors", path: "/x/extractors" },
+    { icon: Send, label: "Publishing", path: "/x/publishing" },
+    { icon: Heart, label: "Auto-Interactions", path: "/x/interactions" },
+    { icon: TrendingUp, label: "Trends Monitor", path: "/x/trends" },
   ];
 
   return (
@@ -213,6 +224,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/instagram/accounts")}
           >
             <SiInstagram className="h-5 w-5 shrink-0" color="#E4405F" />
+          </Button>
+        )}
+
+        {/* X (Twitter) Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={xOpen} onOpenChange={setXOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isXActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <SiX className="h-5 w-5 shrink-0" />
+                  <span>X Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${xOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {xMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isXActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/x/extractors")}
+          >
+            <SiX className="h-5 w-5 shrink-0" />
           </Button>
         )}
       </nav>
