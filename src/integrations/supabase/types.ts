@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_campaigns: {
+        Row: {
+          anti_spam_settings: Json | null
+          campaign_name: string
+          completed_at: string | null
+          content: string | null
+          content_type: string
+          created_at: string
+          failed_count: number | null
+          id: string
+          recipients: Json | null
+          sent_count: number | null
+          started_at: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          total_recipients: number | null
+          user_id: string
+        }
+        Insert: {
+          anti_spam_settings?: Json | null
+          campaign_name: string
+          completed_at?: string | null
+          content?: string | null
+          content_type?: string
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          recipients?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          total_recipients?: number | null
+          user_id: string
+        }
+        Update: {
+          anti_spam_settings?: Json | null
+          campaign_name?: string
+          completed_at?: string | null
+          content?: string | null
+          content_type?: string
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          recipients?: Json | null
+          sent_count?: number | null
+          started_at?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          total_recipients?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          content: string
+          content_type: string
+          created_at: string
+          id: string
+          subject: string
+          template_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          subject: string
+          template_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          subject?: string
+          template_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facebook_accounts: {
         Row: {
           account_email: string | null
