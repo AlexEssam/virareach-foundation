@@ -50,6 +50,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const [pinterestOpen, setPinterestOpen] = useState(location.pathname.startsWith("/pinterest"));
   const [redditOpen, setRedditOpen] = useState(location.pathname.startsWith("/reddit"));
   const [snapchatOpen, setSnapchatOpen] = useState(location.pathname.startsWith("/snapchat"));
+  const [vkOpen, setVkOpen] = useState(location.pathname.startsWith("/vk"));
 
   const handleSignOut = async () => {
     await signOut();
@@ -69,6 +70,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const isPinterestActive = location.pathname.startsWith("/pinterest");
   const isRedditActive = location.pathname.startsWith("/reddit");
   const isSnapchatActive = location.pathname.startsWith("/snapchat");
+  const isVkActive = location.pathname.startsWith("/vk");
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -172,6 +174,13 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: Smartphone, label: "Accounts", path: "/snapchat/accounts" },
     { icon: Download, label: "Extractor", path: "/snapchat/extractor" },
     { icon: Send, label: "Messaging", path: "/snapchat/messaging" },
+  ];
+
+  const vkMenuItems = [
+    { icon: Smartphone, label: "Accounts", path: "/vk/accounts" },
+    { icon: Download, label: "Extractor", path: "/vk/extractor" },
+    { icon: Send, label: "Messaging", path: "/vk/messaging" },
+    { icon: Users, label: "Communities", path: "/vk/communities" },
   ];
 
   return (
@@ -666,6 +675,45 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             onClick={() => navigate("/snapchat/accounts")}
           >
             <SiSnapchat className="h-5 w-5 shrink-0" color="#FFFC00" />
+          </Button>
+        )}
+
+        {/* VK Tools Section */}
+        {!collapsed ? (
+          <Collapsible open={vkOpen} onOpenChange={setVkOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant={isVkActive ? "glow" : "ghost"}
+                className="w-full justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">VK</div>
+                  <span>VK Tools</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${vkOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 pt-2 space-y-1">
+              {vkMenuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant={isActive(item.path) ? "glow" : "ghost"}
+                  className="w-full justify-start gap-3 h-9 text-sm"
+                  onClick={() => navigate(item.path)}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Button>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <Button
+            variant={isVkActive ? "glow" : "ghost"}
+            className="w-full justify-center px-3"
+            onClick={() => navigate("/vk/accounts")}
+          >
+            <div className="h-5 w-5 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">VK</div>
           </Button>
         )}
       </nav>
