@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       }
 
       case 'add': {
-        const { username, account_name, session_data, proxy_host, proxy_port, proxy_username, proxy_password } = params
+        const { username, account_name, session_data, profile_path, proxy_host, proxy_port, proxy_username, proxy_password } = params
         
         const { data, error } = await supabase
           .from('instagram_accounts')
@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
             username,
             account_name,
             session_data,
+            profile_path,
             proxy_host,
             proxy_port,
             proxy_username,
