@@ -167,3 +167,6 @@ verify_jwt = true
 
 [functions.ai-image]
 verify_jwt = true
+
+[functions.ai-video]
+verify_jwt = true
