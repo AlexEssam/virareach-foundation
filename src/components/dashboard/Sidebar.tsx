@@ -25,7 +25,8 @@ import {
   Database,
   Smartphone,
   AtSign,
-  MapPin
+  MapPin,
+  Image
 } from "lucide-react";
 import { SiFacebook, SiWhatsapp, SiInstagram, SiX, SiTelegram, SiTiktok, SiPinterest, SiReddit, SiSnapchat } from "@icons-pack/react-simple-icons";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -77,6 +78,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
   const mainMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: Image, label: "AI Image", path: "/ai/image" },
     { icon: MessageSquare, label: "Campaigns", disabled: true },
     { icon: Coins, label: "Points", disabled: true },
     { icon: Key, label: "License", disabled: true },
