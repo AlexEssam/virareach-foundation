@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -16,7 +15,6 @@ import {
   Globe, 
   Loader2, 
   ExternalLink, 
-  Cookie, 
   CheckCircle, 
   Shield, 
   Activity,
@@ -24,7 +22,12 @@ import {
   RefreshCw,
   MoreVertical,
   Edit2,
-  Power
+  Power,
+  Eye,
+  EyeOff,
+  LogIn,
+  Save,
+  Play
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { SiFacebook } from "@icons-pack/react-simple-icons";
@@ -40,11 +43,13 @@ interface FacebookAccount {
   id: string;
   account_name: string;
   account_email: string | null;
+  account_password: string | null;
   proxy_host: string | null;
   proxy_port: number | null;
+  proxy_username: string | null;
+  proxy_password: string | null;
   status: string;
   created_at: string;
-  cookies: string | null;
 }
 
 export default function FacebookAccounts() {
@@ -53,24 +58,28 @@ export default function FacebookAccounts() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accounts, setAccounts] = useState<FacebookAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingAccount, setAddingAccount] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [step, setStep] = useState<'name' | 'login' | 'cookies'>('name');
+  const [editingAccount, setEditingAccount] = useState<FacebookAccount | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loggingIn, setLoggingIn] = useState<string | null>(null);
   
   // Form state
-  const [accountName, setAccountName] = useState("");
-  const [accountEmail, setAccountEmail] = useState("");
-  const [cookies, setCookies] = useState("");
-  const [proxyHost, setProxyHost] = useState("");
-  const [proxyPort, setProxyPort] = useState("");
-  const [proxyUsername, setProxyUsername] = useState("");
-  const [proxyPassword, setProxyPassword] = useState("");
+  const [formData, setFormData] = useState({
+    accountName: "",
+    email: "",
+    password: "",
+    proxyHost: "",
+    proxyPort: "",
+    proxyUsername: "",
+    proxyPassword: ""
+  });
 
   // Stats calculations
   const stats = useMemo(() => ({
     total: accounts.length,
     active: accounts.filter(a => a.status === 'active').length,
-    pending: accounts.filter(a => a.status === 'pending').length,
+    inactive: accounts.filter(a => a.status === 'inactive').length,
     withProxy: accounts.filter(a => a.proxy_host).length,
   }), [accounts]);
 
@@ -106,64 +115,128 @@ export default function FacebookAccounts() {
     }
   }, [user]);
 
-  const openFacebookLogin = () => {
-    window.open('https://www.facebook.com/login', '_blank', 'width=600,height=700');
-    setStep('cookies');
+  const openFacebook = () => {
+    window.open('https://www.facebook.com', '_blank');
+    toast.info("Login to Facebook in the new window, then come back here to save your credentials");
   };
 
-  const handleAddAccount = async () => {
-    if (!accountName.trim()) {
+  const handleSaveAccount = async () => {
+    if (!formData.accountName.trim()) {
       toast.error("Account name is required");
       return;
     }
+    if (!formData.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    if (!formData.password.trim()) {
+      toast.error("Password is required");
+      return;
+    }
 
-    setAddingAccount(true);
+    setSaving(true);
     try {
-      const { error } = await supabase
-        .from("facebook_accounts")
-        .insert({
-          user_id: user?.id,
-          account_name: accountName,
-          account_email: accountEmail || null,
-          cookies: cookies || null,
-          proxy_host: proxyHost || null,
-          proxy_port: proxyPort ? parseInt(proxyPort) : null,
-          proxy_username: proxyUsername || null,
-          proxy_password: proxyPassword || null,
-          status: cookies ? 'active' : 'pending'
-        });
+      if (editingAccount) {
+        const { error } = await supabase
+          .from("facebook_accounts")
+          .update({
+            account_name: formData.accountName,
+            account_email: formData.email,
+            account_password: formData.password,
+            proxy_host: formData.proxyHost || null,
+            proxy_port: formData.proxyPort ? parseInt(formData.proxyPort) : null,
+            proxy_username: formData.proxyUsername || null,
+            proxy_password: formData.proxyPassword || null
+          })
+          .eq("id", editingAccount.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success("Account updated successfully");
+      } else {
+        const { error } = await supabase
+          .from("facebook_accounts")
+          .insert({
+            user_id: user?.id,
+            account_name: formData.accountName,
+            account_email: formData.email,
+            account_password: formData.password,
+            proxy_host: formData.proxyHost || null,
+            proxy_port: formData.proxyPort ? parseInt(formData.proxyPort) : null,
+            proxy_username: formData.proxyUsername || null,
+            proxy_password: formData.proxyPassword || null,
+            status: 'active'
+          });
 
-      toast.success("Account added successfully!");
-      
+        if (error) throw error;
+        toast.success("Account saved successfully");
+      }
+
       setDialogOpen(false);
       resetForm();
       fetchAccounts();
     } catch (error: any) {
-      console.error("Error adding account:", error);
-      toast.error(error.message || "Failed to add account");
+      console.error("Error saving account:", error);
+      toast.error(error.message || "Failed to save account");
     } finally {
-      setAddingAccount(false);
+      setSaving(false);
     }
   };
 
-  const handleRemoveAccount = async (accountId: string) => {
+  const handleAutoLogin = async (account: FacebookAccount) => {
+    if (!account.account_email || !account.account_password) {
+      toast.error("No credentials saved for this account");
+      return;
+    }
+
+    setLoggingIn(account.id);
+    
+    // Open Facebook login page
+    window.open("https://www.facebook.com/login", "_blank");
+    
+    // Show credentials to user for easy copy
+    toast.success(
+      <div className="space-y-2">
+        <p className="font-medium">Facebook opened! Your credentials:</p>
+        <div className="text-xs bg-background/50 p-2 rounded space-y-1">
+          <p><span className="text-muted-foreground">Email:</span> {account.account_email}</p>
+          <p><span className="text-muted-foreground">Password:</span> {account.account_password}</p>
+        </div>
+      </div>,
+      { duration: 10000 }
+    );
+
+    setTimeout(() => {
+      setLoggingIn(null);
+    }, 2000);
+  };
+
+  const handleDeleteAccount = async (accountId: string) => {
     try {
       const { error } = await supabase
         .from("facebook_accounts")
         .delete()
-        .eq("id", accountId)
-        .eq("user_id", user?.id);
+        .eq("id", accountId);
 
       if (error) throw error;
-
-      toast.success("Account removed successfully");
+      toast.success("Account deleted");
       fetchAccounts();
     } catch (error: any) {
-      console.error("Error removing account:", error);
-      toast.error(error.message || "Failed to remove account");
+      toast.error("Failed to delete account");
     }
+  };
+
+  const handleEditAccount = (account: FacebookAccount) => {
+    setEditingAccount(account);
+    setFormData({
+      accountName: account.account_name,
+      email: account.account_email || "",
+      password: account.account_password || "",
+      proxyHost: account.proxy_host || "",
+      proxyPort: account.proxy_port?.toString() || "",
+      proxyUsername: account.proxy_username || "",
+      proxyPassword: account.proxy_password || ""
+    });
+    setDialogOpen(true);
   };
 
   const handleToggleStatus = async (account: FacebookAccount) => {
@@ -172,8 +245,7 @@ export default function FacebookAccounts() {
       const { error } = await supabase
         .from("facebook_accounts")
         .update({ status: newStatus })
-        .eq("id", account.id)
-        .eq("user_id", user?.id);
+        .eq("id", account.id);
 
       if (error) throw error;
       toast.success(`Account ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
@@ -184,14 +256,17 @@ export default function FacebookAccounts() {
   };
 
   const resetForm = () => {
-    setAccountName("");
-    setAccountEmail("");
-    setCookies("");
-    setProxyHost("");
-    setProxyPort("");
-    setProxyUsername("");
-    setProxyPassword("");
-    setStep('name');
+    setFormData({
+      accountName: "",
+      email: "",
+      password: "",
+      proxyHost: "",
+      proxyPort: "",
+      proxyUsername: "",
+      proxyPassword: ""
+    });
+    setEditingAccount(null);
+    setShowPassword(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -237,7 +312,7 @@ export default function FacebookAccounts() {
                     Facebook Accounts
                   </h1>
                   <p className="text-muted-foreground text-sm mt-0.5">
-                    Manage your connected accounts and sessions
+                    Save login credentials for auto-login
                   </p>
                 </div>
               </div>
@@ -267,198 +342,146 @@ export default function FacebookAccounts() {
                         <div className="p-2 rounded-xl bg-[#1877F2]/10">
                           <SiFacebook className="h-5 w-5 text-[#1877F2]" />
                         </div>
-                        Add Facebook Account
+                        {editingAccount ? "Edit Account" : "Add Facebook Account"}
                       </DialogTitle>
                       <DialogDescription className="text-muted-foreground">
-                        {step === 'name' && "Enter your account details to get started"}
-                        {step === 'login' && "Login to Facebook in the popup window"}
-                        {step === 'cookies' && "Complete the setup with cookies and proxy"}
+                        {editingAccount 
+                          ? "Update your login credentials" 
+                          : "Login to Facebook first, then save your credentials for auto-login"}
                       </DialogDescription>
                     </DialogHeader>
 
-                    {/* Progress Steps */}
-                    <div className="flex items-center justify-center gap-2 py-4">
-                      {['name', 'login', 'cookies'].map((s, i) => (
-                        <div key={s} className="flex items-center">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                            step === s 
-                              ? 'bg-[#1877F2] text-white shadow-lg shadow-[#1877F2]/30' 
-                              : i < ['name', 'login', 'cookies'].indexOf(step)
-                                ? 'bg-[#1877F2]/20 text-[#1877F2]'
-                                : 'bg-muted text-muted-foreground'
-                          }`}>
-                            {i + 1}
+                    <div className="space-y-6 py-4">
+                      {/* Step 1: Open Facebook */}
+                      {!editingAccount && (
+                        <div className="p-4 rounded-xl bg-[#1877F2]/5 border border-[#1877F2]/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="bg-[#1877F2] text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">1</span>
+                            <span className="font-medium text-[#1877F2]">Open Facebook & Login</span>
                           </div>
-                          {i < 2 && (
-                            <div className={`w-12 h-0.5 mx-1 ${
-                              i < ['name', 'login', 'cookies'].indexOf(step)
-                                ? 'bg-[#1877F2]'
-                                : 'bg-muted'
-                            }`} />
-                          )}
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Click below to open Facebook. Login with your account, then come back here.
+                          </p>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={openFacebook}
+                            className="w-full border-[#1877F2]/30 hover:bg-[#1877F2]/10"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open Facebook Login
+                          </Button>
                         </div>
-                      ))}
-                    </div>
+                      )}
 
-                    <div className="space-y-4 py-2">
-                      {step === 'name' && (
+                      {/* Step 2: Save Credentials */}
+                      <div className={!editingAccount ? "p-4 rounded-xl bg-muted/30 border border-border/50" : ""}>
+                        {!editingAccount && (
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">2</span>
+                            <span className="font-medium">Save Your Credentials</span>
+                          </div>
+                        )}
+
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="accountName" className="text-sm font-medium">Account Name *</Label>
+                            <Label htmlFor="accountName">Account Name *</Label>
                             <Input
                               id="accountName"
-                              placeholder="e.g., Marketing Account"
-                              value={accountName}
-                              onChange={(e) => setAccountName(e.target.value)}
-                              className="bg-background/50 border-border/50 focus:border-[#1877F2]"
+                              placeholder="e.g., My Facebook Account"
+                              value={formData.accountName}
+                              onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                              className="bg-background/50"
                             />
                           </div>
+
                           <div className="space-y-2">
-                            <Label htmlFor="accountEmail" className="text-sm font-medium">Account Email (Optional)</Label>
+                            <Label htmlFor="email">Email / Phone *</Label>
                             <Input
-                              id="accountEmail"
+                              id="email"
                               type="email"
-                              placeholder="email@example.com"
-                              value={accountEmail}
-                              onChange={(e) => setAccountEmail(e.target.value)}
-                              className="bg-background/50 border-border/50 focus:border-[#1877F2]"
+                              placeholder="your.email@example.com"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              className="bg-background/50"
                             />
                           </div>
-                        </div>
-                      )}
 
-                      {step === 'login' && (
-                        <div className="text-center space-y-4">
-                          <div className="p-8 rounded-2xl bg-gradient-to-br from-[#1877F2]/10 to-[#0D47A1]/10 border border-[#1877F2]/20">
-                            <div className="w-20 h-20 rounded-full bg-[#1877F2]/10 flex items-center justify-center mx-auto mb-4">
-                              <SiFacebook className="h-10 w-10 text-[#1877F2]" />
-                            </div>
-                            <h3 className="font-semibold text-lg mb-2">Login to Facebook</h3>
-                            <p className="text-sm text-muted-foreground mb-6">
-                              Open Facebook in a new window, log in to your account, then copy your session cookies.
-                            </p>
-                            <Button 
-                              onClick={openFacebookLogin}
-                              className="bg-[#1877F2] hover:bg-[#1877F2]/90 w-full"
-                              size="lg"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Open Facebook Login
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            💡 Tip: Use a browser extension like "EditThisCookie" to export your cookies
-                          </p>
-                        </div>
-                      )}
-
-                      {step === 'cookies' && (
-                        <div className="space-y-5">
                           <div className="space-y-2">
-                            <Label htmlFor="cookies" className="flex items-center gap-2 text-sm font-medium">
-                              <Cookie className="h-4 w-4 text-[#1877F2]" />
-                              Session Cookies
-                            </Label>
-                            <Textarea
-                              id="cookies"
-                              placeholder='Paste your Facebook cookies here (JSON format)...'
-                              value={cookies}
-                              onChange={(e) => setCookies(e.target.value)}
-                              rows={3}
-                              className="font-mono text-xs bg-background/50 border-border/50 focus:border-[#1877F2]"
-                            />
+                            <Label htmlFor="password">Password *</Label>
+                            <div className="relative">
+                              <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter your Facebook password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                className="bg-background/50 pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
                           </div>
-                          
-                          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+
+                          {/* Proxy Settings */}
+                          <div className="pt-4 border-t border-border/50">
                             <div className="flex items-center gap-2 mb-3">
                               <Globe className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">Proxy Settings (Optional)</span>
+                              <span className="text-sm font-medium text-muted-foreground">Proxy Settings (Optional)</span>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                               <Input
                                 placeholder="Host"
-                                value={proxyHost}
-                                onChange={(e) => setProxyHost(e.target.value)}
-                                className="bg-background/50 border-border/50 text-sm"
+                                value={formData.proxyHost}
+                                onChange={(e) => setFormData({ ...formData, proxyHost: e.target.value })}
+                                className="bg-background/50 h-9 text-sm"
                               />
                               <Input
                                 placeholder="Port"
-                                value={proxyPort}
-                                onChange={(e) => setProxyPort(e.target.value)}
-                                className="bg-background/50 border-border/50 text-sm"
+                                value={formData.proxyPort}
+                                onChange={(e) => setFormData({ ...formData, proxyPort: e.target.value })}
+                                className="bg-background/50 h-9 text-sm"
                               />
                               <Input
                                 placeholder="Username"
-                                value={proxyUsername}
-                                onChange={(e) => setProxyUsername(e.target.value)}
-                                className="bg-background/50 border-border/50 text-sm"
+                                value={formData.proxyUsername}
+                                onChange={(e) => setFormData({ ...formData, proxyUsername: e.target.value })}
+                                className="bg-background/50 h-9 text-sm"
                               />
                               <Input
                                 type="password"
                                 placeholder="Password"
-                                value={proxyPassword}
-                                onChange={(e) => setProxyPassword(e.target.value)}
-                                className="bg-background/50 border-border/50 text-sm"
+                                value={formData.proxyPassword}
+                                onChange={(e) => setFormData({ ...formData, proxyPassword: e.target.value })}
+                                className="bg-background/50 h-9 text-sm"
                               />
                             </div>
                           </div>
                         </div>
-                      )}
-                    </div>
-
-                    <div className="flex justify-between gap-3 pt-4 border-t border-border/50">
-                      {step !== 'name' ? (
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => setStep(step === 'cookies' ? 'login' : 'name')}
-                        >
-                          Back
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        {step === 'name' && (
-                          <Button 
-                            onClick={() => {
-                              if (!accountName.trim()) {
-                                toast.error("Please enter an account name");
-                                return;
-                              }
-                              setStep('login');
-                            }}
-                            className="bg-[#1877F2] hover:bg-[#1877F2]/90"
-                          >
-                            Continue
-                          </Button>
-                        )}
-                        {step === 'login' && (
-                          <Button 
-                            variant="outline"
-                            onClick={() => setStep('cookies')}
-                            className="border-[#1877F2]/30 text-[#1877F2] hover:bg-[#1877F2]/10"
-                          >
-                            Next Step
-                          </Button>
-                        )}
-                        {step === 'cookies' && (
-                          <Button 
-                            onClick={handleAddAccount} 
-                            disabled={addingAccount}
-                            className="bg-[#1877F2] hover:bg-[#1877F2]/90"
-                          >
-                            {addingAccount ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                            )}
-                            Save Account
-                          </Button>
-                        )}
                       </div>
+
+                      <Button 
+                        onClick={handleSaveAccount} 
+                        disabled={saving}
+                        className="w-full bg-[#1877F2] hover:bg-[#1877F2]/90"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            {editingAccount ? "Update Account" : "Save Account"}
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -467,82 +490,78 @@ export default function FacebookAccounts() {
           </header>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <Card className="glass border-border/30 hover:border-[#1877F2]/30 transition-colors">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fade-in animation-delay-100">
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-[#1877F2]/30 transition-colors">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
-                    <p className="text-2xl font-bold mt-1">{stats.total}</p>
-                  </div>
+                <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-[#1877F2]/10">
                     <Users className="h-5 w-5 text-[#1877F2]" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass border-border/30 hover:border-emerald-500/30 transition-colors">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Active</p>
-                    <p className="text-2xl font-bold mt-1 text-emerald-500">{stats.active}</p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10">
-                    <Activity className="h-5 w-5 text-emerald-500" />
+                    <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Total Accounts</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
-            <Card className="glass border-border/30 hover:border-amber-500/30 transition-colors">
+
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-green-500/30 transition-colors">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Pending</p>
-                    <p className="text-2xl font-bold mt-1 text-amber-500">{stats.pending}</p>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-green-500/10">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
                   </div>
-                  <div className="p-2.5 rounded-xl bg-amber-500/10">
-                    <Loader2 className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.active}</p>
+                    <p className="text-xs text-muted-foreground">Active</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
-            <Card className="glass border-border/30 hover:border-purple-500/30 transition-colors">
+
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-orange-500/30 transition-colors">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">With Proxy</p>
-                    <p className="text-2xl font-bold mt-1 text-purple-500">{stats.withProxy}</p>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-orange-500/10">
+                    <Activity className="h-5 w-5 text-orange-500" />
                   </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.inactive}</p>
+                    <p className="text-xs text-muted-foreground">Inactive</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-purple-500/30 transition-colors">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-purple-500/10">
                     <Shield className="h-5 w-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.withProxy}</p>
+                    <p className="text-xs text-muted-foreground">With Proxy</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Accounts List */}
+          {/* Accounts Grid */}
           {accounts.length === 0 ? (
-            <Card className="glass border-border/30 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <Card className="border-dashed border-2 border-border/50 bg-card/30 animate-fade-in animation-delay-200">
               <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="relative mb-6">
-                  <div className="absolute inset-0 bg-[#1877F2]/20 rounded-full blur-2xl" />
-                  <div className="relative p-6 rounded-full bg-gradient-to-br from-[#1877F2]/20 to-[#0D47A1]/20 border border-[#1877F2]/20">
-                    <SiFacebook className="h-12 w-12 text-[#1877F2]" />
-                  </div>
+                <div className="p-6 rounded-full bg-[#1877F2]/10 mb-6">
+                  <SiFacebook className="h-12 w-12 text-[#1877F2]" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">No accounts yet</h3>
-                <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                  Add your first Facebook account to start automating your marketing campaigns
+                <h3 className="text-xl font-semibold text-foreground mb-2">No Accounts Added</h3>
+                <p className="text-muted-foreground text-center max-w-md mb-6">
+                  Add your first Facebook account to enable auto-login and manage multiple accounts.
                 </p>
                 <Button 
-                  onClick={() => setDialogOpen(true)}
-                  className="bg-[#1877F2] hover:bg-[#1877F2]/90 shadow-lg shadow-[#1877F2]/20"
-                  size="lg"
+                  onClick={() => setDialogOpen(true)} 
+                  className="bg-[#1877F2] hover:bg-[#1877F2]/90"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Account
@@ -550,106 +569,111 @@ export default function FacebookAccounts() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in animation-delay-200">
               {accounts.map((account, index) => (
                 <Card 
                   key={account.id} 
-                  className="glass border-border/30 hover:border-[#1877F2]/30 transition-all duration-300 animate-fade-in group"
-                  style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+                  className="group bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-[#1877F2]/30 hover:shadow-lg hover:shadow-[#1877F2]/5 transition-all"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <div className={`p-3 rounded-xl transition-colors ${
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-xl ${
+                          account.status === 'active' 
+                            ? 'bg-[#1877F2]/10' 
+                            : 'bg-muted'
+                        }`}>
+                          <SiFacebook className={`h-6 w-6 ${
                             account.status === 'active' 
-                              ? 'bg-gradient-to-br from-[#1877F2] to-[#0D47A1]' 
-                              : 'bg-secondary'
-                          }`}>
-                            <SiFacebook className={`h-6 w-6 ${
-                              account.status === 'active' ? 'text-white' : 'text-muted-foreground'
-                            }`} />
-                          </div>
-                          {account.status === 'active' && (
-                            <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card" />
-                          )}
+                              ? 'text-[#1877F2]' 
+                              : 'text-muted-foreground'
+                          }`} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground truncate">{account.account_name}</h3>
-                            <Badge 
-                              className={`text-[10px] px-2 py-0 font-medium ${
-                                account.status === "active" 
-                                  ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" 
-                                  : account.status === "banned"
-                                  ? "bg-destructive/15 text-destructive border-destructive/30"
-                                  : "bg-amber-500/15 text-amber-500 border-amber-500/30"
-                              }`}
-                            >
-                              {account.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            {account.account_email && (
-                              <span className="text-sm text-muted-foreground truncate">
-                                {account.account_email}
-                              </span>
-                            )}
-                            {account.proxy_host && (
-                              <div className="flex items-center gap-1 text-xs text-purple-400">
-                                <Globe className="h-3 w-3" />
-                                <span>{account.proxy_host}:{account.proxy_port}</span>
-                              </div>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              Added {formatDate(account.created_at)}
-                            </span>
-                          </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">{account.account_name}</h3>
+                          <p className="text-sm text-muted-foreground truncate max-w-[150px]">
+                            {account.account_email || "No email saved"}
+                          </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        {account.cookies && (
-                          <Badge variant="outline" className="hidden sm:flex text-xs gap-1 border-[#1877F2]/30 text-[#1877F2]">
-                            <Cookie className="h-3 w-3" />
-                            Session
-                          </Badge>
-                        )}
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem className="gap-2">
-                              <Edit2 className="h-4 w-4" />
-                              Edit Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="gap-2"
-                              onClick={() => handleToggleStatus(account)}
-                            >
-                              <Power className="h-4 w-4" />
-                              {account.status === 'active' ? 'Deactivate' : 'Activate'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="gap-2 text-destructive focus:text-destructive"
-                              onClick={() => handleRemoveAccount(account.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleEditAccount(account)}>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit Credentials
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(account)}>
+                            <Power className="h-4 w-4 mr-2" />
+                            {account.status === 'active' ? 'Deactivate' : 'Activate'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteAccount(account.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Account
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Badge 
+                        variant="secondary"
+                        className={account.status === 'active' 
+                          ? 'bg-green-500/10 text-green-500 border-green-500/20' 
+                          : 'bg-muted text-muted-foreground'
+                        }
+                      >
+                        {account.status === 'active' ? 'Active' : 'Inactive'}
+                      </Badge>
+                      {account.proxy_host && (
+                        <Badge variant="outline" className="text-purple-400 border-purple-500/30">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Proxy
+                        </Badge>
+                      )}
+                      {account.account_password && (
+                        <Badge variant="outline" className="text-[#1877F2] border-[#1877F2]/30">
+                          <LogIn className="h-3 w-3 mr-1" />
+                          Ready
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground mb-4">
+                      Added {formatDate(account.created_at)}
+                    </div>
+
+                    <Button 
+                      onClick={() => handleAutoLogin(account)}
+                      disabled={loggingIn === account.id || !account.account_password}
+                      className="w-full bg-[#1877F2] hover:bg-[#1877F2]/90 disabled:opacity-50"
+                    >
+                      {loggingIn === account.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Opening...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Login to Facebook
+                        </>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

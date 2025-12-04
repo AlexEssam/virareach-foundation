@@ -190,6 +190,7 @@ export type Database = {
         Row: {
           account_email: string | null
           account_name: string
+          account_password: string | null
           cookies: string | null
           created_at: string
           id: string
@@ -204,6 +205,7 @@ export type Database = {
         Insert: {
           account_email?: string | null
           account_name: string
+          account_password?: string | null
           cookies?: string | null
           created_at?: string
           id?: string
@@ -218,6 +220,7 @@ export type Database = {
         Update: {
           account_email?: string | null
           account_name?: string
+          account_password?: string | null
           cookies?: string | null
           created_at?: string
           id?: string
