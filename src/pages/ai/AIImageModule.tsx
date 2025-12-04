@@ -56,22 +56,38 @@ export default function AIImageModule() {
         body: { action, ...params }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Function invoke error:', error);
+        throw new Error(error.message || 'Failed to call AI service');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
       
-      if (data.images) {
+      if (data?.images && data.images.length > 0) {
         setGeneratedImages(data.images);
         toast.success(`Generated ${data.images.length} images!`);
       } else {
-        const imageUrl = data.image_url || data.styled_image_url || data.upscaled_image_url || 
-                        data.enhanced_face_image || data.result_image_url || data.transparent_image_url;
+        const imageUrl = data?.image_url || data?.styled_image_url || data?.upscaled_image_url || 
+                        data?.enhanced_face_image || data?.result_image_url || data?.transparent_image_url;
         if (imageUrl) {
           setGeneratedImage(imageUrl);
           toast.success("Image generated successfully!");
+        } else {
+          console.error('No image in response:', data);
+          toast.error("No image was generated. Please try again.");
         }
       }
     } catch (error: any) {
       console.error('AI Image error:', error);
-      toast.error(error.message || "Failed to process image");
+      if (error.message?.includes('Rate limit')) {
+        toast.error("Rate limit exceeded. Please wait a moment and try again.");
+      } else if (error.message?.includes('Credits')) {
+        toast.error("Credits exhausted. Please add more credits to continue.");
+      } else {
+        toast.error(error.message || "Failed to process image");
+      }
     } finally {
       setLoading(false);
     }
@@ -461,7 +477,18 @@ export default function AIImageModule() {
           </Tabs>
 
           {/* Results Section */}
-          {(generatedImage || generatedImages.length > 0) && (
+          {loading && (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Generating your image...</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!loading && (generatedImage || generatedImages.length > 0) && (
             <Card>
               <CardHeader>
                 <CardTitle>Generated Results</CardTitle>
@@ -469,7 +496,17 @@ export default function AIImageModule() {
               <CardContent>
                 {generatedImage && (
                   <div className="space-y-4">
-                    <img src={generatedImage} alt="Generated" className="max-w-full rounded-lg" />
+                    <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
+                      <img 
+                        src={generatedImage} 
+                        alt="Generated" 
+                        className="max-w-full max-h-[600px] mx-auto object-contain"
+                        onError={(e) => {
+                          console.error('Image failed to load');
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
                     <Button onClick={() => downloadImage(generatedImage, 'ai-generated.png')}>
                       <Download className="h-4 w-4 mr-2" />
                       Download
@@ -480,7 +517,16 @@ export default function AIImageModule() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {generatedImages.map((img, idx) => (
                       <div key={idx} className="space-y-2">
-                        <img src={img} alt={`Generated ${idx + 1}`} className="w-full rounded-lg" />
+                        <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
+                          <img 
+                            src={img} 
+                            alt={`Generated ${idx + 1}`} 
+                            className="w-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
                         <Button size="sm" onClick={() => downloadImage(img, `ai-generated-${idx + 1}.png`)}>
                           <Download className="h-4 w-4 mr-1" />
                           Download
