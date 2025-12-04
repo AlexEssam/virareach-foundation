@@ -84,7 +84,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     { icon: MessageSquare, label: "Campaigns", path: "/campaigns" },
     { icon: Coins, label: "Points", path: "/points" },
     { icon: Key, label: "License", path: "/license" },
-    { icon: Settings, label: "Settings", disabled: true },
+    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   const facebookMenuItems = [
@@ -213,10 +213,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         {mainMenuItems.map((item) => (
           <Button
             key={item.label}
-            variant={isActive(item.path || "") ? "glow" : "ghost"}
-            className={`w-full justify-start gap-3 ${collapsed ? 'px-3' : ''} ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={item.disabled}
-            onClick={() => item.path && navigate(item.path)}
+            variant={isActive(item.path) ? "glow" : "ghost"}
+            className={`w-full justify-start gap-3 ${collapsed ? 'px-3' : ''}`}
+            onClick={() => navigate(item.path)}
           >
             <item.icon className="h-5 w-5 shrink-0" />
             {!collapsed && <span>{item.label}</span>}

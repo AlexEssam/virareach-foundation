@@ -80,6 +80,7 @@ import AIVideoModule from "./pages/ai/AIVideoModule";
 import Campaigns from "./pages/Campaigns";
 import Points from "./pages/Points";
 import License from "./pages/License";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/points" element={<Points />} />
             <Route path="/license" element={<License />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/facebook/accounts" element={<FacebookAccounts />} />
             <Route path="/facebook/extractor" element={<FacebookExtractor />} />
             <Route path="/facebook/publisher" element={<FacebookPublisher />} />
