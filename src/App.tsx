@@ -77,6 +77,7 @@ import GoogleMapsBusinesses from "./pages/googlemaps/GoogleMapsBusinesses";
 import GoogleMapsReviews from "./pages/googlemaps/GoogleMapsReviews";
 import AIImageModule from "./pages/ai/AIImageModule";
 import AIVideoModule from "./pages/ai/AIVideoModule";
+import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/facebook/accounts" element={<FacebookAccounts />} />
             <Route path="/facebook/extractor" element={<FacebookExtractor />} />
             <Route path="/facebook/publisher" element={<FacebookPublisher />} />
