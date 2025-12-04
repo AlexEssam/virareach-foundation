@@ -3947,6 +3947,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_license: { Args: { license_key_input: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -34,49 +34,29 @@ export function LicenseStatus({ license, onRefresh }: LicenseStatusProps) {
 
     setLoading(true);
     try {
-      // Find the license
-      const { data: licenseData, error: findError } = await supabase
-        .from("licenses")
-        .select("*")
-        .eq("license_key", licenseKey.trim())
-        .single();
+      // Use secure server-side function to activate license
+      const { data, error } = await supabase.rpc('activate_license', {
+        license_key_input: licenseKey.trim()
+      });
 
-      if (findError || !licenseData) {
+      if (error) {
+        throw error;
+      }
+
+      const result = data as { success: boolean; error?: string; message?: string };
+
+      if (!result.success) {
         toast({
-          title: "Invalid License",
-          description: "The license key you entered is not valid.",
+          title: "Activation Failed",
+          description: result.error || "Failed to activate license.",
           variant: "destructive",
         });
         return;
-      }
-
-      if (licenseData.status === "active" && licenseData.user_id !== user?.id) {
-        toast({
-          title: "License Already Active",
-          description: "This license is already activated on another account.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Activate the license
-      const { error: updateError } = await supabase
-        .from("licenses")
-        .update({
-          user_id: user?.id,
-          status: "active" as const,
-          activated_at: new Date().toISOString(),
-          device_fingerprint: navigator.userAgent,
-        })
-        .eq("id", licenseData.id);
-
-      if (updateError) {
-        throw updateError;
       }
 
       toast({
         title: "License Activated!",
-        description: "Your license has been successfully activated.",
+        description: result.message || "Your license has been successfully activated.",
       });
       setLicenseKey("");
       onRefresh();
