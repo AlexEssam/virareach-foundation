@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Send, UserPlus, Users, MessageSquare, Loader2, Play } from "lucide-react";
+import { Send, UserPlus, Users, MessageSquare, Loader2, Play, Crown, Building2, GraduationCap, Clock, Shield } from "lucide-react";
 
 interface Campaign {
   id: string;
@@ -63,6 +64,26 @@ export default function LinkedInMessaging() {
   // Group publish form
   const [groupUrls, setGroupUrls] = useState("");
   const [postContent, setPostContent] = useState("");
+
+  // Auto-follow states
+  const [companyUrls, setCompanyUrls] = useState("");
+  const [universityUrls, setUniversityUrls] = useState("");
+  const [followIntervalMin, setFollowIntervalMin] = useState("30");
+  const [followIntervalMax, setFollowIntervalMax] = useState("90");
+  const [followDailyLimit, setFollowDailyLimit] = useState("50");
+
+  // Safe interval messaging states
+  const [safeCampaignName, setSafeCampaignName] = useState("");
+  const [safeMessageContent, setSafeMessageContent] = useState("");
+  const [safeRecipients, setSafeRecipients] = useState("");
+  const [minDelay, setMinDelay] = useState("60");
+  const [maxDelay, setMaxDelay] = useState("180");
+  const [dailyLimit, setDailyLimit] = useState("50");
+  const [hourlyLimit, setHourlyLimit] = useState("10");
+  const [activeHoursStart, setActiveHoursStart] = useState("9");
+  const [activeHoursEnd, setActiveHoursEnd] = useState("18");
+  const [pauseWeekends, setPauseWeekends] = useState(false);
+  const [randomizeContent, setRandomizeContent] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -189,6 +210,69 @@ export default function LinkedInMessaging() {
     }
   };
 
+  const handleAutoFollowCompanies = async () => {
+    if (!companyUrls || !selectedAccount) {
+      toast({ title: "Error", description: "Please enter company URLs and select an account", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('linkedin-send', {
+        body: { action: 'auto_follow_companies', account_id: selectedAccount, company_urls: companyUrls, interval_min: parseInt(followIntervalMin), interval_max: parseInt(followIntervalMax), daily_limit: parseInt(followDailyLimit) }
+      });
+      if (error) throw error;
+      toast({ title: "Success", description: data.message });
+      setCompanyUrls("");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAutoFollowUniversities = async () => {
+    if (!universityUrls || !selectedAccount) {
+      toast({ title: "Error", description: "Please enter university URLs and select an account", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('linkedin-send', {
+        body: { action: 'auto_follow_universities', account_id: selectedAccount, university_urls: universityUrls, interval_min: parseInt(followIntervalMin), interval_max: parseInt(followIntervalMax), daily_limit: parseInt(followDailyLimit) }
+      });
+      if (error) throw error;
+      toast({ title: "Success", description: data.message });
+      setUniversityUrls("");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSafeCampaign = async () => {
+    if (!safeCampaignName || !safeMessageContent || !safeRecipients) {
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('linkedin-send', {
+        body: { action: 'create_safe_campaign', campaign_name: safeCampaignName, content: safeMessageContent, recipients: safeRecipients, account_id: selectedAccount, interval_settings: { min_delay: parseInt(minDelay), max_delay: parseInt(maxDelay), daily_limit: parseInt(dailyLimit), hourly_limit: parseInt(hourlyLimit), active_start: parseInt(activeHoursStart), active_end: parseInt(activeHoursEnd), pause_weekends: pauseWeekends, randomize: randomizeContent } }
+      });
+      if (error) throw error;
+      toast({ title: "Safe Campaign Created", description: data.message });
+      setSafeCampaignName("");
+      setSafeMessageContent("");
+      setSafeRecipients("");
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -198,16 +282,21 @@ export default function LinkedInMessaging() {
       <Sidebar />
       <main className="flex-1 p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-          <div>
+          <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">LinkedIn Messaging Center</h1>
-            <p className="text-muted-foreground mt-2">Send connection requests, messages, and publish to groups</p>
+            <Badge variant="secondary" className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600 border-amber-500/30">
+              <Crown className="h-3 w-3 mr-1" />Premium
+            </Badge>
           </div>
+          <p className="text-muted-foreground">Send connections, messages, auto-follow, and safe-interval messaging</p>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-3 w-full max-w-lg">
-              <TabsTrigger value="connections"><UserPlus className="h-4 w-4 mr-2" />Connections</TabsTrigger>
-              <TabsTrigger value="messages"><MessageSquare className="h-4 w-4 mr-2" />Messages</TabsTrigger>
-              <TabsTrigger value="groups"><Users className="h-4 w-4 mr-2" />Groups</TabsTrigger>
+            <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0">
+              <TabsTrigger value="connections" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><UserPlus className="h-4 w-4 mr-2" />Connections</TabsTrigger>
+              <TabsTrigger value="messages" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><MessageSquare className="h-4 w-4 mr-2" />Messages</TabsTrigger>
+              <TabsTrigger value="groups" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Users className="h-4 w-4 mr-2" />Groups</TabsTrigger>
+              <TabsTrigger value="auto-follow" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white"><Building2 className="h-4 w-4 mr-2" />Auto-Follow</TabsTrigger>
+              <TabsTrigger value="safe-messaging" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white"><Shield className="h-4 w-4 mr-2" />Safe Messaging</TabsTrigger>
             </TabsList>
 
             <TabsContent value="connections" className="space-y-6">
@@ -395,6 +484,77 @@ export default function LinkedInMessaging() {
                   <Button onClick={handlePublishToGroups} disabled={loading} className="w-full">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                     Publish to Groups
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* PREMIUM: Auto-Follow */}
+            <TabsContent value="auto-follow" className="space-y-6">
+              <Card className="border-amber-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-500" />Auto-Follow Companies</CardTitle>
+                  <CardDescription>Automatically follow companies with safe intervals</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                    <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                    <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name || a.email}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Textarea placeholder="https://linkedin.com/company/company1&#10;https://linkedin.com/company/company2" rows={5} value={companyUrls} onChange={(e) => setCompanyUrls(e.target.value)} />
+                  <div className="grid grid-cols-3 gap-4">
+                    <div><Label>Min Interval (s)</Label><Input type="number" value={followIntervalMin} onChange={(e) => setFollowIntervalMin(e.target.value)} /></div>
+                    <div><Label>Max Interval (s)</Label><Input type="number" value={followIntervalMax} onChange={(e) => setFollowIntervalMax(e.target.value)} /></div>
+                    <div><Label>Daily Limit</Label><Input type="number" value={followDailyLimit} onChange={(e) => setFollowDailyLimit(e.target.value)} /></div>
+                  </div>
+                  <Button onClick={handleAutoFollowCompanies} disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600">
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Building2 className="mr-2 h-4 w-4" />}Follow Companies
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="border-amber-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-500" />Auto-Follow Universities</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea placeholder="https://linkedin.com/school/university1&#10;https://linkedin.com/school/university2" rows={5} value={universityUrls} onChange={(e) => setUniversityUrls(e.target.value)} />
+                  <Button onClick={handleAutoFollowUniversities} disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600">
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}Follow Universities
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* PREMIUM: Safe Interval Messaging */}
+            <TabsContent value="safe-messaging" className="space-y-6">
+              <Card className="border-amber-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-amber-500" />Safe-Interval Messaging</CardTitle>
+                  <CardDescription>Send messages with advanced time control to avoid rate limits</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div><Label>Campaign Name</Label><Input value={safeCampaignName} onChange={(e) => setSafeCampaignName(e.target.value)} /></div>
+                    <Select value={selectedAccount} onValueChange={setSelectedAccount}><SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger><SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.account_name || a.email}</SelectItem>)}</SelectContent></Select>
+                  </div>
+                  <div><Label>Message</Label><Textarea rows={4} value={safeMessageContent} onChange={(e) => setSafeMessageContent(e.target.value)} placeholder="Hi {first_name}..." /></div>
+                  <div><Label>Recipients (one per line)</Label><Textarea rows={4} value={safeRecipients} onChange={(e) => setSafeRecipients(e.target.value)} /></div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div><Label>Min Delay (s)</Label><Input type="number" value={minDelay} onChange={(e) => setMinDelay(e.target.value)} /></div>
+                    <div><Label>Max Delay (s)</Label><Input type="number" value={maxDelay} onChange={(e) => setMaxDelay(e.target.value)} /></div>
+                    <div><Label>Daily Limit</Label><Input type="number" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} /></div>
+                    <div><Label>Hourly Limit</Label><Input type="number" value={hourlyLimit} onChange={(e) => setHourlyLimit(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label>Active Hours Start</Label><Input type="number" value={activeHoursStart} onChange={(e) => setActiveHoursStart(e.target.value)} /></div>
+                    <div><Label>Active Hours End</Label><Input type="number" value={activeHoursEnd} onChange={(e) => setActiveHoursEnd(e.target.value)} /></div>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="flex items-center gap-2"><Switch checked={pauseWeekends} onCheckedChange={setPauseWeekends} /><Label>Pause on weekends</Label></div>
+                    <div className="flex items-center gap-2"><Switch checked={randomizeContent} onCheckedChange={setRandomizeContent} /><Label>Randomize content</Label></div>
+                  </div>
+                  <Button onClick={handleCreateSafeCampaign} disabled={loading} className="w-full bg-amber-500 hover:bg-amber-600">
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}Create Safe Campaign
                   </Button>
                 </CardContent>
               </Card>

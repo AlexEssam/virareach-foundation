@@ -121,6 +121,73 @@ serve(async (req) => {
         });
       }
 
+      // PREMIUM: Extract full company data with all fields
+      case 'companies_full': {
+        const { keyword, industry, size, location, limit } = params;
+        
+        const { data, error } = await supabaseClient
+          .from('linkedin_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'companies_full',
+            source: keyword,
+            filters: { industry, size, location, limit },
+            status: 'processing'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const mockResults = Array.from({ length: Math.min(limit || 100, 500) }, (_, i) => ({
+          company_id: `comp_${Date.now()}_${i}`,
+          company_url: `https://linkedin.com/company/company-${i + 1}`,
+          name: `${keyword || 'Tech'} Company ${i + 1}`,
+          tagline: `Leading provider of ${keyword || 'technology'} solutions`,
+          description: `We are a ${['startup', 'enterprise', 'mid-size'][Math.floor(Math.random() * 3)]} company specializing in ${keyword || 'technology'}. Founded in ${2000 + Math.floor(Math.random() * 24)}, we serve clients worldwide.`,
+          industry: industry || ['Technology', 'Finance', 'Healthcare', 'Marketing', 'E-commerce'][Math.floor(Math.random() * 5)],
+          company_type: ['Public Company', 'Privately Held', 'Partnership', 'Nonprofit'][Math.floor(Math.random() * 4)],
+          headquarters: location || ['San Francisco, CA', 'New York, NY', 'London, UK', 'Berlin, DE', 'Singapore'][Math.floor(Math.random() * 5)],
+          founded_year: 2000 + Math.floor(Math.random() * 24),
+          specialties: ['SaaS', 'Cloud Computing', 'AI/ML', 'Data Analytics', 'Mobile Apps'].slice(0, Math.floor(Math.random() * 4) + 1),
+          size: ['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'][Math.floor(Math.random() * 7)],
+          employee_count: Math.floor(Math.random() * 10000) + 10,
+          followers: Math.floor(Math.random() * 500000) + 100,
+          website: `https://company${i + 1}.com`,
+          phone: `+1-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+          email: `contact@company${i + 1}.com`,
+          linkedin_posts_per_month: Math.floor(Math.random() * 30) + 1,
+          recent_funding: Math.random() > 0.7 ? `$${Math.floor(Math.random() * 100) + 1}M Series ${['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)]}` : null,
+          locations: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => 
+            ['New York', 'San Francisco', 'London', 'Berlin', 'Tokyo', 'Sydney'][Math.floor(Math.random() * 6)]
+          ),
+          top_employees: Array.from({ length: 5 }, (_, j) => ({
+            name: `Executive ${j + 1}`,
+            title: ['CEO', 'CTO', 'CFO', 'COO', 'VP Engineering'][j],
+            profile_url: `https://linkedin.com/in/exec-${i}-${j}`
+          }))
+        }));
+
+        await supabaseClient
+          .from('linkedin_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id);
+
+        console.log(`Extracted ${mockResults.length} full company profiles`);
+        return new Response(JSON.stringify({ 
+          extraction_id: data.id, 
+          results: mockResults,
+          count: mockResults.length 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'universities': {
         const { country, field } = params;
         
@@ -161,6 +228,143 @@ serve(async (req) => {
           extraction_id: data.id, 
           results: mockResults,
           count: mockResults.length 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // PREMIUM: Extract full university data with all fields
+      case 'universities_full': {
+        const { country, field, ranking, limit } = params;
+        
+        const { data, error } = await supabaseClient
+          .from('linkedin_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'universities_full',
+            source: country,
+            filters: { field, ranking, limit },
+            status: 'processing'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const universityNames = [
+          'Massachusetts Institute of Technology', 'Stanford University', 'Harvard University',
+          'University of Cambridge', 'University of Oxford', 'ETH Zurich',
+          'National University of Singapore', 'University of Tokyo', 'Tsinghua University',
+          'University of Melbourne', 'University of Toronto', 'Technical University of Munich'
+        ];
+
+        const mockResults = Array.from({ length: Math.min(limit || 50, 200) }, (_, i) => ({
+          university_id: `univ_${Date.now()}_${i}`,
+          university_url: `https://linkedin.com/school/university-${i + 1}`,
+          name: universityNames[i % universityNames.length] || `University ${i + 1}`,
+          type: ['Public University', 'Private University', 'Research University', 'Liberal Arts College'][Math.floor(Math.random() * 4)],
+          description: `A leading institution of higher education specializing in ${field || 'various disciplines'}. Established in ${1800 + Math.floor(Math.random() * 200)}.`,
+          location: {
+            city: ['Boston', 'Stanford', 'Cambridge', 'Berlin', 'Tokyo', 'Singapore'][Math.floor(Math.random() * 6)],
+            country: country || ['United States', 'United Kingdom', 'Germany', 'Japan', 'Singapore'][Math.floor(Math.random() * 5)]
+          },
+          founded_year: 1800 + Math.floor(Math.random() * 200),
+          world_ranking: Math.floor(Math.random() * 500) + 1,
+          national_ranking: Math.floor(Math.random() * 100) + 1,
+          total_students: Math.floor(Math.random() * 50000) + 5000,
+          undergraduate_students: Math.floor(Math.random() * 30000) + 3000,
+          graduate_students: Math.floor(Math.random() * 20000) + 2000,
+          international_students_percent: Math.floor(Math.random() * 40) + 5,
+          faculty_count: Math.floor(Math.random() * 5000) + 500,
+          student_faculty_ratio: `${Math.floor(Math.random() * 15) + 5}:1`,
+          alumni_on_linkedin: Math.floor(Math.random() * 500000) + 50000,
+          followers: Math.floor(Math.random() * 1000000) + 10000,
+          website: `https://university${i + 1}.edu`,
+          admissions_email: `admissions@university${i + 1}.edu`,
+          phone: `+1-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+          top_programs: ['Computer Science', 'Business Administration', 'Engineering', 'Medicine', 'Law', 'Economics'].slice(0, Math.floor(Math.random() * 4) + 2),
+          research_areas: ['AI/ML', 'Biotechnology', 'Clean Energy', 'Quantum Computing', 'Neuroscience'].slice(0, Math.floor(Math.random() * 3) + 1),
+          tuition_domestic: `$${Math.floor(Math.random() * 50000) + 10000}/year`,
+          tuition_international: `$${Math.floor(Math.random() * 70000) + 30000}/year`,
+          acceptance_rate: `${Math.floor(Math.random() * 30) + 5}%`,
+          notable_alumni: Array.from({ length: 3 }, (_, j) => ({
+            name: `Notable Alumnus ${j + 1}`,
+            achievement: ['Nobel Laureate', 'Fortune 500 CEO', 'Tech Founder', 'Political Leader'][Math.floor(Math.random() * 4)]
+          })),
+          campus_locations: Math.floor(Math.random() * 5) + 1
+        }));
+
+        await supabaseClient
+          .from('linkedin_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id);
+
+        console.log(`Extracted ${mockResults.length} full university profiles`);
+        return new Response(JSON.stringify({ 
+          extraction_id: data.id, 
+          results: mockResults,
+          count: mockResults.length 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // PREMIUM: Extract emails from search engines by interest + country
+      case 'emails_search_engine': {
+        const { interest, country, job_titles, sources, limit } = params;
+        
+        const { data, error } = await supabaseClient
+          .from('linkedin_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'emails_search_engine',
+            source: `${interest} - ${country}`,
+            filters: { interest, country, job_titles, sources, limit },
+            status: 'processing'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'company.com', 'business.io', 'corp.net'];
+        const jobTitleList = job_titles?.split(',').map((t: string) => t.trim()) || ['CEO', 'Director', 'Manager', 'Founder', 'VP'];
+
+        const mockResults = Array.from({ length: Math.min(limit || 500, 2000) }, (_, i) => ({
+          email: `${['john', 'jane', 'mike', 'sarah', 'alex'][Math.floor(Math.random() * 5)]}${i + 1}@${domains[Math.floor(Math.random() * domains.length)]}`,
+          name: `Contact ${i + 1}`,
+          title: jobTitleList[Math.floor(Math.random() * jobTitleList.length)],
+          company: `Company ${Math.floor(Math.random() * 500) + 1}`,
+          linkedin_url: Math.random() > 0.3 ? `https://linkedin.com/in/user-${i + 1}` : null,
+          interest: interest,
+          country: country,
+          source: sources?.split(',')[Math.floor(Math.random() * (sources?.split(',').length || 1))] || 'Google',
+          verified: Math.random() > 0.2,
+          confidence_score: Math.floor(Math.random() * 40) + 60,
+          extracted_at: new Date().toISOString()
+        }));
+
+        await supabaseClient
+          .from('linkedin_extractions')
+          .update({
+            status: 'completed',
+            results: mockResults,
+            result_count: mockResults.length,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', data.id);
+
+        console.log(`Extracted ${mockResults.length} emails from search engines`);
+        return new Response(JSON.stringify({ 
+          extraction_id: data.id, 
+          results: mockResults,
+          count: mockResults.length,
+          verified_count: mockResults.filter(r => r.verified).length
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
