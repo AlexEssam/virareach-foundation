@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, LogIn } from "lucide-react";
+import { Plus, Trash2, LogIn, FolderOpen } from "lucide-react";
 import { SiInstagram } from "@icons-pack/react-simple-icons";
 import {
   Dialog,
@@ -35,6 +35,7 @@ interface InstagramAccount {
   daily_dm_count: number;
   proxy_host: string | null;
   session_data: string | null;
+  profile_path: string | null;
   created_at: string;
 }
 
@@ -50,6 +51,7 @@ export default function InstagramAccounts() {
     username: "",
     account_name: "",
     session_data: "",
+    profile_path: "",
     proxy_host: "",
     proxy_port: "",
     proxy_username: "",
@@ -79,14 +81,56 @@ export default function InstagramAccounts() {
     fetchAccounts();
   }, []);
 
+  const handleBrowseFolder = async () => {
+    try {
+      // Use File System Access API if available
+      if ('showDirectoryPicker' in window) {
+        const dirHandle = await (window as any).showDirectoryPicker({
+          mode: 'readwrite',
+          startIn: 'documents'
+        });
+        setFormData({ ...formData, profile_path: dirHandle.name });
+        toast({
+          title: "Folder Selected",
+          description: `Selected folder: ${dirHandle.name}`,
+        });
+      } else {
+        // Fallback for browsers that don't support showDirectoryPicker
+        toast({
+          title: "Not Supported",
+          description: "Please enter the folder path manually",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        toast({
+          title: "Error",
+          description: "Failed to select folder",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleAddAccount = async () => {
+    if (!formData.profile_path) {
+      toast({
+        title: "Error",
+        description: "Please select or enter a folder path",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke("instagram-accounts", {
         body: {
           action: "add",
-          username: formData.username,
+          username: formData.username || formData.account_name,
           account_name: formData.account_name,
           session_data: formData.session_data,
+          profile_path: formData.profile_path,
           proxy_host: formData.proxy_host || null,
           proxy_port: formData.proxy_port ? parseInt(formData.proxy_port) : null,
           proxy_username: formData.proxy_username || null,
@@ -102,6 +146,7 @@ export default function InstagramAccounts() {
         username: "",
         account_name: "",
         session_data: "",
+        profile_path: "",
         proxy_host: "",
         proxy_port: "",
         proxy_username: "",
@@ -151,13 +196,6 @@ export default function InstagramAccounts() {
     return "Not_logged";
   };
 
-  const getPath = (account: InstagramAccount) => {
-    if (account.proxy_host) {
-      return account.proxy_host;
-    }
-    return "C:\\Users\\Default";
-  };
-
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
@@ -186,15 +224,7 @@ export default function InstagramAccounts() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Username</Label>
-                    <Input
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div>
-                    <Label>Channel Name (optional)</Label>
+                    <Label>Channel Name</Label>
                     <Input
                       value={formData.account_name}
                       onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
@@ -202,7 +232,37 @@ export default function InstagramAccounts() {
                     />
                   </div>
                   <div>
-                    <Label>Session Data</Label>
+                    <Label>Profile Folder</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={formData.profile_path}
+                        onChange={(e) => setFormData({ ...formData, profile_path: e.target.value })}
+                        placeholder="C:\Users\Instagram\Profile1"
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleBrowseFolder}
+                        className="shrink-0"
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select or create a folder for this channel's profile data
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Username (optional)</Label>
+                    <Input
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div>
+                    <Label>Session Data (optional)</Label>
                     <Input
                       value={formData.session_data}
                       onChange={(e) => setFormData({ ...formData, session_data: e.target.value })}
@@ -296,7 +356,7 @@ export default function InstagramAccounts() {
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {getPath(account)}
+                        {account.profile_path || "N/A"}
                       </TableCell>
                       <TableCell>
                         <span className={account.session_data ? 'text-green-500' : 'text-orange-500'}>

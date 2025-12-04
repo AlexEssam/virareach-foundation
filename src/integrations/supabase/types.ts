@@ -794,6 +794,7 @@ export type Database = {
           following_count: number | null
           id: string
           last_action_at: string | null
+          profile_path: string | null
           proxy_host: string | null
           proxy_password: string | null
           proxy_port: number | null
@@ -814,6 +815,7 @@ export type Database = {
           following_count?: number | null
           id?: string
           last_action_at?: string | null
+          profile_path?: string | null
           proxy_host?: string | null
           proxy_password?: string | null
           proxy_port?: number | null
@@ -834,6 +836,7 @@ export type Database = {
           following_count?: number | null
           id?: string
           last_action_at?: string | null
+          profile_path?: string | null
           proxy_host?: string | null
           proxy_password?: string | null
           proxy_port?: number | null
