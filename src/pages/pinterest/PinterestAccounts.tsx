@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Shield, RefreshCw, UserPlus } from "lucide-react";
+import { Plus, Trash2, Shield, RefreshCw, UserPlus, ExternalLink, Copy } from "lucide-react";
 import { SiPinterest } from "@icons-pack/react-simple-icons";
 
 interface PinterestAccount {
@@ -49,6 +49,16 @@ export default function PinterestAccounts() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const handleOpenPinterest = () => {
+    window.open('https://www.pinterest.com/login/', '_blank');
+    toast({ title: "Pinterest Opened", description: "Login to Pinterest, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
+  };
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["pinterest-accounts"],
@@ -188,7 +198,21 @@ export default function PinterestAccounts() {
                     <DialogDescription>Add a new Pinterest account with optional proxy</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="flex gap-2 mb-4">
+                    <Button onClick={handleOpenPinterest} variant="outline" className="flex-1">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open Pinterest to Login
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleCopyLink('https://www.pinterest.com/login/', 'Pinterest')}
+                      title="Copy Link"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Username *</Label>
                         <Input

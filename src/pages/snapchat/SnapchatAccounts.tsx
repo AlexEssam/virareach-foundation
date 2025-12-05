@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Ghost, Plus, Trash2, RefreshCw, Users, MessageSquare } from "lucide-react";
+import { Ghost, Plus, Trash2, RefreshCw, Users, MessageSquare, ExternalLink, Copy } from "lucide-react";
 
 interface Account {
   id: string;
@@ -32,6 +32,16 @@ const SnapchatAccounts = () => {
   const [proxyPassword, setProxyPassword] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleOpenSnapchat = () => {
+    window.open('https://www.snapchat.com/', '_blank');
+    toast({ title: "Snapchat Opened", description: "Login to Snapchat, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
+  };
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["snapchat-accounts"],
@@ -165,6 +175,20 @@ const SnapchatAccounts = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button onClick={handleOpenSnapchat} variant="outline" className="flex-1">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Snapchat to Login
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => handleCopyLink('https://www.snapchat.com/', 'Snapchat')}
+                    title="Copy Link"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div>
                   <Label>Accounts (one per line)</Label>
                   <Textarea

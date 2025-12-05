@@ -23,7 +23,8 @@ import {
   LogIn,
   User,
   Shield,
-  Wifi
+  Wifi,
+  Copy
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { SiFacebook } from "@icons-pack/react-simple-icons";
@@ -111,6 +112,11 @@ export default function FacebookAccounts() {
   const openFacebook = () => {
     window.open('https://www.facebook.com', '_blank');
     toast.info("Login to Facebook, then save your credentials here");
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success(`${name} URL copied to clipboard`);
   };
 
   const handleSaveAccount = async () => {
@@ -311,15 +317,26 @@ export default function FacebookAccounts() {
 
                   <div className="space-y-4 pt-4">
                     {!editingAccount && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={openFacebook}
-                        className="w-full"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Open Facebook to Login
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={openFacebook}
+                          className="flex-1"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open Facebook to Login
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => handleCopyLink('https://www.facebook.com/login', 'Facebook')}
+                          title="Copy Link"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
 
                     <div className="space-y-3">

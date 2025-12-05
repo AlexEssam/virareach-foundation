@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Smartphone, QrCode, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, X, Trash2, Save, Plus, RotateCcw
+  Smartphone, Key, Shield, RefreshCw, Settings, 
+  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download
 } from "lucide-react";
 
 interface TelegramAccount {
@@ -48,10 +48,7 @@ export default function TelegramAccountManager() {
   
   const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
   const [loading, setLoading] = useState(false);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [loginStep, setLoginStep] = useState<'idle' | 'qr' | 'code' | 'success'>('idle');
-  const [verificationCode, setVerificationCode] = useState("");
+  const [loginStep, setLoginStep] = useState<'idle' | 'success'>('idle');
   
   // New account form
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -95,41 +92,19 @@ export default function TelegramAccountManager() {
     if (error) console.error('Error fetching accounts:', error);
   };
 
-  const handleGenerateQR = async () => {
-    if (!phoneNumber) {
-      toast({ title: "Error", description: "Please enter a phone number", variant: "destructive" });
-      return;
-    }
-
-    setQrLoading(true);
-    setLoginStep('qr');
-    
-    // Simulate QR code generation
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Generate a mock QR code (in production, this would come from the Telegram API)
-    setQrCode(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=tg://login?token=${Date.now()}`);
-    setQrLoading(false);
-    
-    toast({ title: "QR Code Generated", description: "Scan with your Telegram app" });
+  const handleOpenTelegramWeb = () => {
+    window.open('https://web.telegram.org/', '_blank');
+    toast({ title: "Telegram Web Opened", description: "Login to Telegram Web, then save your account here" });
   };
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode || verificationCode.length < 5) {
-      toast({ title: "Error", description: "Please enter a valid verification code", variant: "destructive" });
-      return;
-    }
+  const handleOpenTelegramDesktop = () => {
+    window.open('https://desktop.telegram.org/', '_blank');
+    toast({ title: "Telegram Download Opened", description: "Download Telegram Desktop" });
+  };
 
-    setLoading(true);
-    
-    // Simulate verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setLoginStep('success');
-    setLoading(false);
-    
-    // Auto-save after successful verification
-    await handleSaveAccount();
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
   };
 
   const handleSaveAccount = async () => {
@@ -171,9 +146,7 @@ export default function TelegramAccountManager() {
       setProxyPort("");
       setProxyUsername("");
       setProxyPassword("");
-      setQrCode(null);
       setLoginStep('idle');
-      setVerificationCode("");
       
       fetchAccounts();
     } catch (error: unknown) {
@@ -348,10 +321,10 @@ export default function TelegramAccountManager() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <QrCode className="h-5 w-5" />
-                      QR Code Login
+                      <ExternalLink className="h-5 w-5" />
+                      Open Telegram to Login
                     </CardTitle>
-                    <CardDescription>Scan QR code with your Telegram app</CardDescription>
+                    <CardDescription>Login on Telegram Web or Desktop, then save your account here</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -373,38 +346,46 @@ export default function TelegramAccountManager() {
                     </div>
 
                     {loginStep === 'idle' && (
-                      <Button onClick={handleGenerateQR} disabled={qrLoading} className="w-full">
-                        {qrLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                        Generate QR Code
-                      </Button>
-                    )}
-
-                    {loginStep === 'qr' && qrCode && (
-                      <div className="space-y-4">
-                        <div className="flex justify-center p-4 bg-white rounded-lg">
-                          <img src={qrCode} alt="QR Code" className="w-48 h-48" />
-                        </div>
-                        <p className="text-center text-sm text-muted-foreground">
-                          Open Telegram {'>'} Settings {'>'} Devices {'>'} Scan QR Code
-                        </p>
-                        <div className="space-y-2">
-                          <Label>Verification Code (if prompted)</Label>
-                          <Input
-                            placeholder="12345"
-                            value={verificationCode}
-                            onChange={(e) => setVerificationCode(e.target.value)}
-                          />
+                      <>
+                        <div className="p-4 bg-muted/50 rounded-lg text-center space-y-2">
+                          <Smartphone className="h-12 w-12 mx-auto text-primary" />
+                          <p className="text-sm text-muted-foreground">
+                            Click below to open Telegram. After logging in, return here and save your account.
+                          </p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" onClick={() => { setLoginStep('idle'); setQrCode(null); }} className="flex-1">
-                            Cancel
+                          <Button onClick={handleOpenTelegramWeb} className="flex-1">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open Telegram Web
                           </Button>
-                          <Button onClick={handleVerifyCode} disabled={loading} className="flex-1">
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                            Verify & Save
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleCopyLink('https://web.telegram.org/', 'Telegram Web')}
+                            title="Copy Link"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleOpenTelegramDesktop} variant="outline" className="flex-1">
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Telegram Desktop
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleCopyLink('https://desktop.telegram.org/', 'Telegram Desktop')}
+                            title="Copy Link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <Button onClick={handleSaveAccount} disabled={loading || !phoneNumber} className="w-full">
+                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                          Save Account
+                        </Button>
+                      </>
                     )}
 
                     {loginStep === 'success' && (

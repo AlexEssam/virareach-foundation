@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Shield, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Shield, RefreshCw, ExternalLink, Copy } from "lucide-react";
 import { SiReddit } from "@icons-pack/react-simple-icons";
 
 interface RedditAccount {
@@ -44,6 +44,16 @@ export default function RedditAccounts() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const handleOpenReddit = () => {
+    window.open('https://www.reddit.com/login/', '_blank');
+    toast({ title: "Reddit Opened", description: "Login to Reddit, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
+  };
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["reddit-accounts"],
@@ -121,6 +131,20 @@ export default function RedditAccounts() {
                   <DialogDescription>Add a new Reddit account with optional proxy</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
+                  <div className="flex gap-2">
+                    <Button onClick={handleOpenReddit} variant="outline" className="flex-1">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open Reddit to Login
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleCopyLink('https://www.reddit.com/login/', 'Reddit')}
+                      title="Copy Link"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Username *</Label>

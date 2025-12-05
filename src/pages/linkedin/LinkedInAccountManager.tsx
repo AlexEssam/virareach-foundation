@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Linkedin, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, Mail, Lock, Eye, EyeOff
+  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, Mail, Lock, Eye, EyeOff, ExternalLink, Copy
 } from "lucide-react";
 
 interface LinkedInAccount {
@@ -91,6 +91,16 @@ export default function LinkedInAccountManager() {
 
     if (data) setAccounts(data);
     if (error) console.error('Error fetching accounts:', error);
+  };
+
+  const handleOpenLinkedIn = () => {
+    window.open('https://www.linkedin.com/login', '_blank');
+    toast({ title: "LinkedIn Opened", description: "Login to LinkedIn, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
   };
 
   const handleStartLogin = () => {
@@ -363,6 +373,21 @@ export default function LinkedInAccountManager() {
                     <CardDescription>Sign in with your LinkedIn email and password</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <Button onClick={handleOpenLinkedIn} variant="outline" className="flex-1">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open LinkedIn to Login
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleCopyLink('https://www.linkedin.com/login', 'LinkedIn')}
+                        title="Copy Link"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
                     <div className="space-y-2">
                       <Label>Email Address</Label>
                       <Input

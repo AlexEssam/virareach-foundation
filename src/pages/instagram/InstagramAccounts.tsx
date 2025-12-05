@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ExternalLink, Shield, Loader2, Check, Trash2, Plus, RotateCcw, 
-  Eye, EyeOff, Lock, Timer, Shuffle, FolderOpen, UserPlus
+  Eye, EyeOff, Lock, Timer, Shuffle, FolderOpen, UserPlus, Copy
 } from "lucide-react";
 import { SiInstagram } from "@icons-pack/react-simple-icons";
 
@@ -128,6 +128,11 @@ export default function InstagramAccounts() {
   const handleOpenInstagramSignUp = () => {
     window.open('https://www.instagram.com/accounts/emailsignup/', '_blank');
     toast({ title: "Instagram Opened", description: "Create your account, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
   };
 
   const handleCredentialsLogin = async () => {
@@ -364,10 +369,20 @@ export default function InstagramAccounts() {
                             Click below to open Instagram. After logging in, return here and save your credentials.
                           </p>
                         </div>
-                        <Button onClick={handleOpenInstagramLogin} className="w-full">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Open Instagram Login
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button onClick={handleOpenInstagramLogin} className="flex-1">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open Instagram Login
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleCopyLink('https://www.instagram.com/accounts/login/', 'Instagram')}
+                            title="Copy Link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <Button onClick={handleOpenInstagramSignUp} variant="outline" className="w-full">
                           <UserPlus className="mr-2 h-4 w-4" />
                           Open Instagram Sign Up
