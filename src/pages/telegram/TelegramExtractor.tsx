@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Users, MessageSquare, Archive, Phone, Clock, Eye, UserSearch, Filter, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Download, Users, MessageSquare, Archive, Phone, Clock, Eye, UserSearch, Filter, Loader2, RefreshCw, Trash2, Crown, AtSign } from "lucide-react";
 
 interface Extraction {
   id: string;
@@ -72,6 +72,11 @@ export default function TelegramExtractor() {
   
   // Auto-refresh state
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
+  // Filter state
+  const [filterPremium, setFilterPremium] = useState<string>("all");
+  const [filterLastSeen, setFilterLastSeen] = useState<string>("all");
+  const [filterHasUsername, setFilterHasUsername] = useState<string>("all");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -125,16 +130,44 @@ export default function TelegramExtractor() {
     }
   };
 
+  // Filter function for extraction results
+  const getFilteredResults = (results: Record<string, unknown>[] | null) => {
+    if (!results || results.length === 0) return [];
+    
+    return results.filter(item => {
+      // Premium filter
+      if (filterPremium === "premium" && !item.is_premium) return false;
+      if (filterPremium === "non-premium" && item.is_premium) return false;
+      
+      // Last seen filter
+      if (filterLastSeen !== "all" && item.last_seen_status !== filterLastSeen) return false;
+      
+      // Username filter
+      if (filterHasUsername === "yes" && !item.username) return false;
+      if (filterHasUsername === "no" && item.username) return false;
+      
+      return true;
+    });
+  };
+
   const handleDownload = (extraction: Extraction, format: 'csv' | 'json') => {
     if (!extraction.results || extraction.results.length === 0) {
       toast({ title: "No data", description: "This extraction has no results to download", variant: "destructive" });
       return;
     }
 
-    const filename = `${extraction.extraction_type}_${new Date(extraction.created_at).toISOString().split('T')[0]}`;
+    // Apply filters to results
+    const filteredResults = getFilteredResults(extraction.results);
+    
+    if (filteredResults.length === 0) {
+      toast({ title: "No matching data", description: "No results match the current filters", variant: "destructive" });
+      return;
+    }
+
+    const filename = `${extraction.extraction_type}_${new Date(extraction.created_at).toISOString().split('T')[0]}_filtered`;
 
     if (format === 'json') {
-      const blob = new Blob([JSON.stringify(extraction.results, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(filteredResults, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -142,9 +175,9 @@ export default function TelegramExtractor() {
       a.click();
       URL.revokeObjectURL(url);
     } else {
-      const headers = Object.keys(extraction.results[0] || {});
+      const headers = Object.keys(filteredResults[0] || {});
       const csvRows = [headers.join(',')];
-      extraction.results.forEach(row => {
+      filteredResults.forEach(row => {
         csvRows.push(headers.map(h => {
           const value = row[h];
           const stringValue = value === null || value === undefined ? '' : String(value);
@@ -160,7 +193,7 @@ export default function TelegramExtractor() {
       URL.revokeObjectURL(url);
     }
 
-    toast({ title: "Downloaded", description: `${format.toUpperCase()} file downloaded successfully` });
+    toast({ title: "Downloaded", description: `${filteredResults.length} ${format.toUpperCase()} records downloaded` });
   };
 
   const handleExtract = async () => {
@@ -491,18 +524,83 @@ export default function TelegramExtractor() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Recent Extractions</CardTitle>
-                  <CardDescription>Your extraction history</CardDescription>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Recent Extractions</CardTitle>
+                    <CardDescription>Your extraction history - filter before downloading</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      Updated {Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago
+                    </span>
+                    <Button size="sm" variant="outline" onClick={fetchData}>
+                      <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    Updated {Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago
-                  </span>
-                  <Button size="sm" variant="outline" onClick={fetchData}>
-                    <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-                  </Button>
+                
+                {/* Filter Controls */}
+                <div className="flex flex-wrap gap-3 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filterPremium} onValueChange={setFilterPremium}>
+                      <SelectTrigger className="w-[140px] h-8">
+                        <SelectValue placeholder="Premium" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="premium">Premium Only</SelectItem>
+                        <SelectItem value="non-premium">Non-Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filterLastSeen} onValueChange={setFilterLastSeen}>
+                      <SelectTrigger className="w-[150px] h-8">
+                        <SelectValue placeholder="Last Seen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="online">Online Now</SelectItem>
+                        <SelectItem value="recently">Recently</SelectItem>
+                        <SelectItem value="within_week">Within Week</SelectItem>
+                        <SelectItem value="within_month">Within Month</SelectItem>
+                        <SelectItem value="long_ago">Long Ago</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <AtSign className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filterHasUsername} onValueChange={setFilterHasUsername}>
+                      <SelectTrigger className="w-[150px] h-8">
+                        <SelectValue placeholder="Username" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="yes">Has Username</SelectItem>
+                        <SelectItem value="no">No Username</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {(filterPremium !== "all" || filterLastSeen !== "all" || filterHasUsername !== "all") && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8"
+                      onClick={() => {
+                        setFilterPremium("all");
+                        setFilterLastSeen("all");
+                        setFilterHasUsername("all");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -511,49 +609,63 @@ export default function TelegramExtractor() {
                 <p className="text-muted-foreground text-center py-8">No extractions yet</p>
               ) : (
                 <div className="space-y-3">
-                  {extractions.map((extraction) => (
-                    <div key={extraction.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div>
-                        <p className="font-medium capitalize">{extraction.extraction_type.replace(/_/g, ' ')}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {extraction.source || 'Account extraction'} • {new Date(extraction.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={extraction.status === 'completed' ? 'default' : extraction.status === 'processing' ? 'outline' : 'secondary'}>
-                          {extraction.status === 'processing' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                          {extraction.status}
-                        </Badge>
-                        <span className="text-sm font-medium">{extraction.result_count || 0} results</span>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownload(extraction, 'csv')}
-                            disabled={extraction.status !== 'completed' || !extraction.results}
-                          >
-                            <Download className="h-4 w-4 mr-1" /> CSV
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownload(extraction, 'json')}
-                            disabled={extraction.status !== 'completed' || !extraction.results}
-                          >
-                            <Download className="h-4 w-4 mr-1" /> JSON
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(extraction.id)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  {extractions.map((extraction) => {
+                    const totalResults = extraction.result_count || 0;
+                    const filteredCount = extraction.results ? getFilteredResults(extraction.results).length : 0;
+                    const hasActiveFilters = filterPremium !== "all" || filterLastSeen !== "all" || filterHasUsername !== "all";
+                    
+                    return (
+                      <div key={extraction.id} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium capitalize">{extraction.extraction_type.replace(/_/g, ' ')}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {extraction.source || 'Account extraction'} • {new Date(extraction.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={extraction.status === 'completed' ? 'default' : extraction.status === 'processing' ? 'outline' : 'secondary'}>
+                            {extraction.status === 'processing' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                            {extraction.status}
+                          </Badge>
+                          <span className="text-sm font-medium">
+                            {hasActiveFilters && extraction.status === 'completed' ? (
+                              <span className={filteredCount === 0 ? 'text-destructive' : 'text-primary'}>
+                                {filteredCount} of {totalResults}
+                              </span>
+                            ) : (
+                              `${totalResults} results`
+                            )}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownload(extraction, 'csv')}
+                              disabled={extraction.status !== 'completed' || !extraction.results || (hasActiveFilters && filteredCount === 0)}
+                            >
+                              <Download className="h-4 w-4 mr-1" /> CSV
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDownload(extraction, 'json')}
+                              disabled={extraction.status !== 'completed' || !extraction.results || (hasActiveFilters && filteredCount === 0)}
+                            >
+                              <Download className="h-4 w-4 mr-1" /> JSON
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(extraction.id)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
