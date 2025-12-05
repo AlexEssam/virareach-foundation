@@ -332,6 +332,9 @@ export default function WhatsAppAccounts() {
                           Download
                         </Button>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-3 p-2 bg-muted/50 rounded-md w-full text-center">
+                        💡 <strong>Tip:</strong> If "Open" buttons launch ChromeDriver instead of your browser, use the Copy button and paste the URL manually into Chrome/Firefox.
+                      </p>
                     </div>
 
                     {/* Instructions */}

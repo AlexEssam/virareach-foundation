@@ -317,26 +317,31 @@ export default function FacebookAccounts() {
 
                   <div className="space-y-4 pt-4">
                     {!editingAccount && (
-                      <div className="flex gap-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={openFacebook}
-                          className="flex-1"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Open Facebook to Login
-                        </Button>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => handleCopyLink('https://www.facebook.com/login', 'Facebook')}
-                          title="Copy Link"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={openFacebook}
+                            className="flex-1"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open Facebook to Login
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleCopyLink('https://www.facebook.com/login', 'Facebook')}
+                            title="Copy Link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground p-2 bg-muted/50 rounded-md">
+                          💡 <strong>Tip:</strong> If "Open" buttons launch ChromeDriver instead of your browser, use the Copy button and paste the URL manually into Chrome/Firefox.
+                        </p>
+                      </>
                     )}
 
                     <div className="space-y-3">

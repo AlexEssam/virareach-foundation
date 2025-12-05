@@ -176,6 +176,9 @@ export default function XAccountManager() {
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground p-2 bg-muted/50 rounded-md">
+                    💡 <strong>Tip:</strong> If "Open" buttons launch ChromeDriver instead of your browser, use the Copy button and paste the URL manually into Chrome/Firefox.
+                  </p>
                   
                   <div>
                     <Label>Account Name (Display)</Label>
