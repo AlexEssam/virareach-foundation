@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Plus, Smartphone, Trash2, Loader2, RefreshCw, 
   Settings, CheckCircle, XCircle, Wifi, Shield, RotateCcw,
-  ExternalLink, Download, Save
+  ExternalLink, Download, Save, Copy
 } from "lucide-react";
 
 interface WhatsAppAccount {
@@ -169,6 +169,11 @@ export default function WhatsAppAccounts() {
     });
   };
 
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
+  };
+
   const handleReconnect = async (account: WhatsAppAccount) => {
     window.open('https://web.whatsapp.com/', '_blank');
     toast({ 
@@ -303,13 +308,21 @@ export default function WhatsAppAccounts() {
                       </p>
                       
                       {/* Action Buttons */}
-                      <div className="flex gap-3 w-full">
+                      <div className="flex gap-2 w-full">
                         <Button 
                           className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90"
                           onClick={handleOpenWhatsAppWeb}
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Open WhatsApp Web
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleCopyLink('https://web.whatsapp.com/', 'WhatsApp Web')}
+                          title="Copy Link"
+                        >
+                          <Copy className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="outline"

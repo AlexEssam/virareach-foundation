@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, RefreshCw, Users, MessageSquare, UserPlus } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Users, MessageSquare, UserPlus, ExternalLink, Copy } from "lucide-react";
 
 interface Account {
   id: string;
@@ -33,6 +33,16 @@ const VKAccounts = () => {
   const [proxyPassword, setProxyPassword] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleOpenVK = () => {
+    window.open('https://vk.com/login', '_blank');
+    toast({ title: "VK Opened", description: "Login to VK, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
+  };
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["vk-accounts"],
@@ -179,6 +189,20 @@ const VKAccounts = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button onClick={handleOpenVK} variant="outline" className="flex-1">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open VK to Login
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => handleCopyLink('https://vk.com/login', 'VK')}
+                    title="Copy Link"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div>
                   <Label>Accounts (one per line)</Label>
                   <Textarea

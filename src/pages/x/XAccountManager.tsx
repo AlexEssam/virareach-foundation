@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Plus, RefreshCw, Settings, Trash2, CheckCircle, XCircle, 
-  Key, Globe, RotateCcw, Clock, Smartphone, QrCode
+  Key, Globe, RotateCcw, Clock, Smartphone, ExternalLink, Copy
 } from "lucide-react";
 import { SiX } from "@icons-pack/react-simple-icons";
 
@@ -22,8 +22,6 @@ export default function XAccountManager() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [loginStep, setLoginStep] = useState<"credentials" | "qr" | "2fa" | "success">("credentials");
-  const [qrCode, setQrCode] = useState("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -59,21 +57,14 @@ export default function XAccountManager() {
     fetchAccounts();
   }, []);
 
-  const simulateLogin = async () => {
-    setLoading(true);
-    setLoginStep("qr");
-    
-    // Simulate QR code generation
-    await new Promise((r) => setTimeout(r, 1000));
-    setQrCode("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=x_auth_" + Date.now());
-    
-    // Simulate QR scan after delay
-    await new Promise((r) => setTimeout(r, 3000));
-    setLoginStep("2fa");
-    
-    await new Promise((r) => setTimeout(r, 2000));
-    setLoginStep("success");
-    setLoading(false);
+  const handleOpenXLogin = () => {
+    window.open('https://x.com/login', '_blank');
+    toast({ title: "X Login Opened", description: "Login to X, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
   };
 
   const handleAddAccount = async () => {
@@ -95,7 +86,6 @@ export default function XAccountManager() {
       });
 
       setShowAddDialog(false);
-      setLoginStep("credentials");
       setFormData({
         username: "",
         api_key: "",
@@ -171,173 +161,125 @@ export default function XAccountManager() {
                   <DialogTitle>Add X Account</DialogTitle>
                 </DialogHeader>
                 
-                {loginStep === "credentials" && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Account Name (Display)</Label>
-                      <Input
-                        value={formData.account_name}
-                        onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                        placeholder="My Main Account"
-                      />
-                    </div>
-                    <div>
-                      <Label>Username</Label>
-                      <Input
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        placeholder="@username"
-                      />
-                    </div>
-                    
-                    <div className="border-t pt-4">
-                      <p className="text-sm font-medium mb-3">API Credentials (Developer Portal)</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs">API Key</Label>
-                          <Input
-                            value={formData.api_key}
-                            onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
-                            placeholder="API Key"
-                            type="password"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">API Secret</Label>
-                          <Input
-                            value={formData.api_secret}
-                            onChange={(e) => setFormData({ ...formData, api_secret: e.target.value })}
-                            placeholder="API Secret"
-                            type="password"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Access Token</Label>
-                          <Input
-                            value={formData.access_token}
-                            onChange={(e) => setFormData({ ...formData, access_token: e.target.value })}
-                            placeholder="Access Token"
-                            type="password"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Access Token Secret</Label>
-                          <Input
-                            value={formData.access_token_secret}
-                            onChange={(e) => setFormData({ ...formData, access_token_secret: e.target.value })}
-                            placeholder="Access Token Secret"
-                            type="password"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t pt-4">
-                      <p className="text-sm font-medium mb-3">Proxy Settings (Optional)</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs">Host</Label>
-                          <Input
-                            value={formData.proxy_host}
-                            onChange={(e) => setFormData({ ...formData, proxy_host: e.target.value })}
-                            placeholder="proxy.example.com"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Port</Label>
-                          <Input
-                            value={formData.proxy_port}
-                            onChange={(e) => setFormData({ ...formData, proxy_port: e.target.value })}
-                            placeholder="8080"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Username</Label>
-                          <Input
-                            value={formData.proxy_username}
-                            onChange={(e) => setFormData({ ...formData, proxy_username: e.target.value })}
-                            placeholder="Optional"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Password</Label>
-                          <Input
-                            value={formData.proxy_password}
-                            onChange={(e) => setFormData({ ...formData, proxy_password: e.target.value })}
-                            placeholder="Optional"
-                            type="password"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button onClick={simulateLogin} variant="outline" className="flex-1">
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Login with QR
-                      </Button>
-                      <Button onClick={handleAddAccount} disabled={!formData.username} className="flex-1">
-                        <Key className="h-4 w-4 mr-2" />
-                        Add with API Keys
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {loginStep === "qr" && (
-                  <div className="text-center space-y-4 py-6">
-                    <div className="flex justify-center">
-                      <div className="p-4 bg-white rounded-lg">
-                        {qrCode ? (
-                          <img src={qrCode} alt="QR Code" className="w-48 h-48" />
-                        ) : (
-                          <div className="w-48 h-48 bg-muted animate-pulse rounded" />
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-medium">Scan QR Code with X App</p>
-                      <p className="text-sm text-muted-foreground">
-                        Open X app → Settings → Security → Scan QR Code
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">Waiting for scan...</span>
-                    </div>
-                  </div>
-                )}
-
-                {loginStep === "2fa" && (
-                  <div className="text-center space-y-4 py-6">
-                    <Smartphone className="h-16 w-16 mx-auto text-primary" />
-                    <div>
-                      <p className="font-medium">Confirm on Mobile</p>
-                      <p className="text-sm text-muted-foreground">
-                        Check your X app for a login confirmation request
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">Waiting for confirmation...</span>
-                    </div>
-                  </div>
-                )}
-
-                {loginStep === "success" && (
-                  <div className="text-center space-y-4 py-6">
-                    <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
-                    <div>
-                      <p className="font-medium text-green-500">Login Successful!</p>
-                      <p className="text-sm text-muted-foreground">
-                        Account has been added and is ready to use
-                      </p>
-                    </div>
-                    <Button onClick={() => { setShowAddDialog(false); setLoginStep("credentials"); fetchAccounts(); }}>
-                      Done
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button onClick={handleOpenXLogin} variant="outline" className="flex-1">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open X to Login
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleCopyLink('https://x.com/login', 'X')}
+                      title="Copy Link"
+                    >
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
+                  
+                  <div>
+                    <Label>Account Name (Display)</Label>
+                    <Input
+                      value={formData.account_name}
+                      onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                      placeholder="My Main Account"
+                    />
+                  </div>
+                  <div>
+                    <Label>Username</Label>
+                    <Input
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="@username"
+                    />
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium mb-3">API Credentials (Developer Portal)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">API Key</Label>
+                        <Input
+                          value={formData.api_key}
+                          onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                          placeholder="API Key"
+                          type="password"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">API Secret</Label>
+                        <Input
+                          value={formData.api_secret}
+                          onChange={(e) => setFormData({ ...formData, api_secret: e.target.value })}
+                          placeholder="API Secret"
+                          type="password"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Access Token</Label>
+                        <Input
+                          value={formData.access_token}
+                          onChange={(e) => setFormData({ ...formData, access_token: e.target.value })}
+                          placeholder="Access Token"
+                          type="password"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Access Token Secret</Label>
+                        <Input
+                          value={formData.access_token_secret}
+                          onChange={(e) => setFormData({ ...formData, access_token_secret: e.target.value })}
+                          placeholder="Access Token Secret"
+                          type="password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium mb-3">Proxy Settings (Optional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Host</Label>
+                        <Input
+                          value={formData.proxy_host}
+                          onChange={(e) => setFormData({ ...formData, proxy_host: e.target.value })}
+                          placeholder="proxy.example.com"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Port</Label>
+                        <Input
+                          value={formData.proxy_port}
+                          onChange={(e) => setFormData({ ...formData, proxy_port: e.target.value })}
+                          placeholder="8080"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Username</Label>
+                        <Input
+                          value={formData.proxy_username}
+                          onChange={(e) => setFormData({ ...formData, proxy_username: e.target.value })}
+                          placeholder="Optional"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Password</Label>
+                        <Input
+                          value={formData.proxy_password}
+                          onChange={(e) => setFormData({ ...formData, proxy_password: e.target.value })}
+                          placeholder="Optional"
+                          type="password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button onClick={handleAddAccount} disabled={!formData.username} className="w-full">
+                    <Key className="h-4 w-4 mr-2" />
+                    Add Account
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           </div>

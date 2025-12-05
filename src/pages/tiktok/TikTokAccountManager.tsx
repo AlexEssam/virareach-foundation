@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ExternalLink, Shield, Loader2, Check, Trash2, Plus, RotateCcw, 
-  Eye, EyeOff, Lock, Timer, Shuffle, UserPlus, RefreshCw, Save, Settings
+  Eye, EyeOff, Lock, Timer, Shuffle, UserPlus, RefreshCw, Save, Settings, Copy
 } from "lucide-react";
 import { SiTiktok } from "@icons-pack/react-simple-icons";
 
@@ -116,6 +116,11 @@ export default function TikTokAccountManager() {
   const handleOpenTikTokSignUp = () => {
     window.open('https://www.tiktok.com/signup', '_blank');
     toast({ title: "TikTok Opened", description: "Create your account, then save your credentials here" });
+  };
+
+  const handleCopyLink = (url: string, name: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
   };
 
   const handleCredentialsLogin = async () => {
@@ -319,10 +324,20 @@ export default function TikTokAccountManager() {
                             Click below to open TikTok. After logging in, return here and save your credentials.
                           </p>
                         </div>
-                        <Button onClick={handleOpenTikTokLogin} className="w-full">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Open TikTok Login
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button onClick={handleOpenTikTokLogin} className="flex-1">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open TikTok Login
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleCopyLink('https://www.tiktok.com/login', 'TikTok')}
+                            title="Copy Link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <Button onClick={handleOpenTikTokSignUp} variant="outline" className="w-full">
                           <UserPlus className="mr-2 h-4 w-4" />
                           Open TikTok Sign Up
