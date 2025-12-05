@@ -21,6 +21,7 @@ interface Extraction {
   source: string | null;
   status: string;
   result_count: number | null;
+  results: Record<string, unknown>[] | null;
   created_at: string;
 }
 
@@ -82,12 +83,50 @@ export default function TelegramExtractor() {
 
   const fetchData = async () => {
     const [extractionsRes, accountsRes] = await Promise.all([
-      supabase.from('telegram_extractions').select('*').order('created_at', { ascending: false }).limit(20),
+      supabase.from('telegram_extractions').select('id, extraction_type, source, status, result_count, results, created_at').order('created_at', { ascending: false }).limit(20),
       supabase.from('telegram_accounts').select('*').eq('status', 'active')
     ]);
 
-    if (extractionsRes.data) setExtractions(extractionsRes.data);
+    if (extractionsRes.data) setExtractions(extractionsRes.data as Extraction[]);
     if (accountsRes.data) setAccounts(accountsRes.data);
+  };
+
+  const handleDownload = (extraction: Extraction, format: 'csv' | 'json') => {
+    if (!extraction.results || extraction.results.length === 0) {
+      toast({ title: "No data", description: "This extraction has no results to download", variant: "destructive" });
+      return;
+    }
+
+    const filename = `${extraction.extraction_type}_${new Date(extraction.created_at).toISOString().split('T')[0]}`;
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(extraction.results, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = Object.keys(extraction.results[0] || {});
+      const csvRows = [headers.join(',')];
+      extraction.results.forEach(row => {
+        csvRows.push(headers.map(h => {
+          const value = row[h];
+          const stringValue = value === null || value === undefined ? '' : String(value);
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }).join(','));
+      });
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    toast({ title: "Downloaded", description: `${format.toUpperCase()} file downloaded successfully` });
   };
 
   const handleExtract = async () => {
@@ -419,6 +458,24 @@ export default function TelegramExtractor() {
                           {extraction.status}
                         </Badge>
                         <span className="text-sm font-medium">{extraction.result_count || 0} results</span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownload(extraction, 'csv')}
+                            disabled={extraction.status !== 'completed' || !extraction.results}
+                          >
+                            <Download className="h-4 w-4 mr-1" /> CSV
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownload(extraction, 'json')}
+                            disabled={extraction.status !== 'completed' || !extraction.results}
+                          >
+                            <Download className="h-4 w-4 mr-1" /> JSON
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
