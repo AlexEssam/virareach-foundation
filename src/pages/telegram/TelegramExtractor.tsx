@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Users, MessageSquare, Archive, Phone, Clock, Eye, UserSearch, Filter, Loader2 } from "lucide-react";
+import { Download, Users, MessageSquare, Archive, Phone, Clock, Eye, UserSearch, Filter, Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 interface Extraction {
   id: string;
@@ -69,6 +69,9 @@ export default function TelegramExtractor() {
   const [phonePrefixes, setPhonePrefixes] = useState("");
   const [countryCodes, setCountryCodes] = useState("");
   const [excludePrefixes, setExcludePrefixes] = useState("");
+  
+  // Auto-refresh state
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -82,6 +85,19 @@ export default function TelegramExtractor() {
     }
   }, [user]);
 
+  // Auto-refresh when there are processing extractions
+  useEffect(() => {
+    const hasProcessing = extractions.some(e => e.status === 'processing');
+    
+    if (hasProcessing) {
+      const interval = setInterval(() => {
+        fetchData();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [extractions]);
+
   const fetchData = async () => {
     const [extractionsRes, accountsRes] = await Promise.all([
       supabase.from('telegram_extractions').select('id, extraction_type, source, status, result_count, results, created_at').order('created_at', { ascending: false }).limit(20),
@@ -90,6 +106,23 @@ export default function TelegramExtractor() {
 
     if (extractionsRes.data) setExtractions(extractionsRes.data as Extraction[]);
     if (accountsRes.data) setAccounts(accountsRes.data);
+    setLastUpdated(new Date());
+  };
+
+  const handleDelete = async (extractionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('telegram_extractions')
+        .delete()
+        .eq('id', extractionId);
+      
+      if (error) throw error;
+      
+      toast({ title: "Deleted", description: "Extraction removed successfully" });
+      fetchData();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete extraction", variant: "destructive" });
+    }
   };
 
   const handleDownload = (extraction: Extraction, format: 'csv' | 'json') => {
@@ -458,8 +491,20 @@ export default function TelegramExtractor() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recent Extractions</CardTitle>
-              <CardDescription>Your extraction history</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Extractions</CardTitle>
+                  <CardDescription>Your extraction history</CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    Updated {Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago
+                  </span>
+                  <Button size="sm" variant="outline" onClick={fetchData}>
+                    <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {extractions.length === 0 ? (
@@ -475,7 +520,8 @@ export default function TelegramExtractor() {
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant={extraction.status === 'completed' ? 'default' : 'secondary'}>
+                        <Badge variant={extraction.status === 'completed' ? 'default' : extraction.status === 'processing' ? 'outline' : 'secondary'}>
+                          {extraction.status === 'processing' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
                           {extraction.status}
                         </Badge>
                         <span className="text-sm font-medium">{extraction.result_count || 0} results</span>
@@ -495,6 +541,14 @@ export default function TelegramExtractor() {
                             disabled={extraction.status !== 'completed' || !extraction.results}
                           >
                             <Download className="h-4 w-4 mr-1" /> JSON
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(extraction.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
