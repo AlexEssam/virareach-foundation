@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Smartphone, QrCode, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, Trash2, Save, Plus, RotateCcw, Eye, EyeOff, Lock, Timer, Shuffle
+  ExternalLink, Shield, Loader2, Check, Trash2, Plus, RotateCcw, 
+  Eye, EyeOff, Lock, Timer, Shuffle, UserPlus, RefreshCw, Save, Settings
 } from "lucide-react";
 import { SiTiktok } from "@icons-pack/react-simple-icons";
 
@@ -60,8 +60,7 @@ export default function TikTokAccountManager() {
   const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [loginStep, setLoginStep] = useState<'idle' | 'qr' | 'credentials' | 'success'>('idle');
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [loginStep, setLoginStep] = useState<'idle' | 'success'>('idle');
   const [showPassword, setShowPassword] = useState(false);
   
   // Account form
@@ -109,13 +108,14 @@ export default function TikTokAccountManager() {
     if (error) console.error('Error fetching accounts:', error);
   };
 
-  const handleGenerateQR = async () => {
-    setLoginLoading(true);
-    setLoginStep('qr');
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setQrCode(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=tiktok://login?token=${Date.now()}`);
-    setLoginLoading(false);
-    toast({ title: "QR Code Generated", description: "Scan with your TikTok app" });
+  const handleOpenTikTokLogin = () => {
+    window.open('https://www.tiktok.com/login', '_blank');
+    toast({ title: "TikTok Opened", description: "Login to TikTok, then save your credentials here" });
+  };
+
+  const handleOpenTikTokSignUp = () => {
+    window.open('https://www.tiktok.com/signup', '_blank');
+    toast({ title: "TikTok Opened", description: "Create your account, then save your credentials here" });
   };
 
   const handleCredentialsLogin = async () => {
@@ -168,7 +168,6 @@ export default function TikTokAccountManager() {
     setProxyPort("");
     setProxyUsername("");
     setProxyPassword("");
-    setQrCode(null);
     setLoginStep('idle');
   };
 
@@ -308,24 +307,27 @@ export default function TikTokAccountManager() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><QrCode className="h-5 w-5" />QR Code Login</CardTitle>
-                    <CardDescription>Scan with your TikTok app for secure login</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><ExternalLink className="h-5 w-5" />Open TikTok to Login</CardTitle>
+                    <CardDescription>Login on TikTok, then save your credentials here</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {loginStep === 'idle' && (
-                      <Button onClick={handleGenerateQR} disabled={loginLoading} className="w-full">
-                        {loginLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                        Generate QR Code
-                      </Button>
-                    )}
-                    {loginStep === 'qr' && qrCode && (
-                      <div className="space-y-4">
-                        <div className="flex justify-center p-4 bg-white rounded-lg">
-                          <img src={qrCode} alt="QR Code" className="w-48 h-48" />
+                      <>
+                        <div className="p-4 bg-muted/50 rounded-lg text-center space-y-2">
+                          <SiTiktok className="h-12 w-12 mx-auto" />
+                          <p className="text-sm text-muted-foreground">
+                            Click below to open TikTok. After logging in, return here and save your credentials.
+                          </p>
                         </div>
-                        <p className="text-center text-sm text-muted-foreground">Open TikTok → Profile → Menu → QR Code → Scan</p>
-                        <Button variant="outline" onClick={() => { setLoginStep('idle'); setQrCode(null); }} className="w-full">Cancel</Button>
-                      </div>
+                        <Button onClick={handleOpenTikTokLogin} className="w-full">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open TikTok Login
+                        </Button>
+                        <Button onClick={handleOpenTikTokSignUp} variant="outline" className="w-full">
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Open TikTok Sign Up
+                        </Button>
+                      </>
                     )}
                     {loginStep === 'success' && (
                       <div className="text-center py-4">
