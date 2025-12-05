@@ -56,6 +56,7 @@ export default function TelegramExtractor() {
   const [groupLink, setGroupLink] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [includeHidden, setIncludeHidden] = useState(false);
+  const [extractLimit, setExtractLimit] = useState("all");
   
   // Last seen extraction
   const [usernamesList, setUsernamesList] = useState("");
@@ -164,7 +165,8 @@ export default function TelegramExtractor() {
           body = { 
             action,
             group_link: groupLink,
-            include_hidden: includeHidden || extractionType === "group_members_hidden"
+            include_hidden: includeHidden || extractionType === "group_members_hidden",
+            limit: extractLimit
           };
           break;
         case "hidden_members_full":
@@ -271,10 +273,29 @@ export default function TelegramExtractor() {
                     <div className="space-y-2">
                       <Label>Group Link or Username</Label>
                       <Input
-                        placeholder="https://t.me/groupname or @groupname"
+                        placeholder="https://t.me/groupname, @groupname, or groupname"
                         value={groupLink}
                         onChange={(e) => setGroupLink(e.target.value)}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Accepts: https://t.me/groupname, t.me/groupname, @groupname, or just groupname
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Extraction Limit</Label>
+                      <Select value={extractLimit} onValueChange={setExtractLimit}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select limit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Members</SelectItem>
+                          <SelectItem value="100">100 members</SelectItem>
+                          <SelectItem value="500">500 members</SelectItem>
+                          <SelectItem value="1000">1,000 members</SelectItem>
+                          <SelectItem value="2000">2,000 members</SelectItem>
+                          <SelectItem value="5000">5,000 members</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     {extractionType === "group_members" && (
                       <div className="flex items-center justify-between">

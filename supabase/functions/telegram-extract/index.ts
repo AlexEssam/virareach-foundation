@@ -31,14 +31,34 @@ serve(async (req) => {
 
     switch (action) {
       case 'group_members': {
-        const { group_link, include_hidden } = params;
+        const { group_link, include_hidden, limit } = params;
+        
+        // Normalize and validate the group link/username
+        let normalizedGroupLink = group_link?.trim() || '';
+        if (!normalizedGroupLink) {
+          return new Response(JSON.stringify({ error: 'Group link or username is required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Normalize different input formats
+        if (normalizedGroupLink.startsWith('@')) {
+          normalizedGroupLink = `https://t.me/${normalizedGroupLink.substring(1)}`;
+        } else if (normalizedGroupLink.startsWith('t.me/')) {
+          normalizedGroupLink = `https://${normalizedGroupLink}`;
+        } else if (!normalizedGroupLink.startsWith('http://') && !normalizedGroupLink.startsWith('https://')) {
+          normalizedGroupLink = `https://t.me/${normalizedGroupLink}`;
+        }
+        
+        console.log(`Normalized group link: ${normalizedGroupLink}`);
         
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: include_hidden ? 'group_members_hidden' : 'group_members',
-            source: group_link,
+            source: normalizedGroupLink,
             status: 'processing'
           })
           .select()
@@ -46,10 +66,13 @@ serve(async (req) => {
 
         if (error) throw error;
 
-        // Simulate extraction with mock data including last_seen
-        const mockResults = Array.from({ length: 50 }, (_, i) => ({
+        // Determine how many members to extract (default 500, max 5000 for demo)
+        const extractLimit = limit === 'all' ? 1500 : Math.min(parseInt(limit) || 500, 5000);
+        
+        // Simulate extraction with mock data
+        const mockResults = Array.from({ length: extractLimit }, (_, i) => ({
           user_id: `user_${i + 1}`,
-          username: `telegram_user_${i + 1}`,
+          username: Math.random() > 0.2 ? `telegram_user_${i + 1}` : null,
           first_name: `User ${i + 1}`,
           last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
           phone: include_hidden ? `+1234567${String(i).padStart(4, '0')}` : null,
@@ -73,7 +96,7 @@ serve(async (req) => {
           })
           .eq('id', data.id);
 
-        console.log(`Extracted ${mockResults.length} group members`);
+        console.log(`Extracted ${mockResults.length} group members from ${normalizedGroupLink}`);
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockResults,
