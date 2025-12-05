@@ -48,7 +48,7 @@ export default function TelegramAccountManager() {
   
   const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loginStep, setLoginStep] = useState<'idle' | 'success'>('idle');
+  const [loginStep, setLoginStep] = useState<'idle' | 'opened' | 'success'>('idle');
   
   // New account form
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -94,12 +94,14 @@ export default function TelegramAccountManager() {
 
   const handleOpenTelegramWeb = () => {
     window.open('https://web.telegram.org/', '_blank');
-    toast({ title: "Telegram Web Opened", description: "Login to Telegram Web, then save your account here" });
+    setLoginStep('opened');
+    toast({ title: "Telegram Web Opened", description: "Login to Telegram, then click 'I'm Logged In' below" });
   };
 
   const handleOpenTelegramDesktop = () => {
     window.open('https://desktop.telegram.org/', '_blank');
-    toast({ title: "Telegram Download Opened", description: "Download Telegram Desktop" });
+    setLoginStep('opened');
+    toast({ title: "Telegram Download Opened", description: "After installing and logging in, click 'I'm Logged In' below" });
   };
 
   const handleCopyLink = (url: string, name: string) => {
@@ -135,6 +137,7 @@ export default function TelegramAccountManager() {
 
       if (error) throw error;
 
+      setLoginStep('success');
       toast({ title: "Account Saved", description: "Telegram account added successfully" });
       
       // Reset form
@@ -347,11 +350,19 @@ export default function TelegramAccountManager() {
 
                     {loginStep === 'idle' && (
                       <>
-                        <div className="p-4 bg-muted/50 rounded-lg text-center space-y-2">
-                          <Smartphone className="h-12 w-12 mx-auto text-primary" />
-                          <p className="text-sm text-muted-foreground">
-                            Click below to open Telegram. After logging in, return here and save your account.
-                          </p>
+                        <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">1</div>
+                            <p className="text-sm">Enter your phone number above</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">2</div>
+                            <p className="text-sm text-muted-foreground">Open Telegram and login</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">3</div>
+                            <p className="text-sm text-muted-foreground">Click "I'm Logged In" then Save</p>
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <Button onClick={handleOpenTelegramWeb} className="flex-1">
@@ -381,9 +392,33 @@ export default function TelegramAccountManager() {
                             <Copy className="h-4 w-4" />
                           </Button>
                         </div>
-                        <Button onClick={handleSaveAccount} disabled={loading || !phoneNumber} className="w-full">
-                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                          Save Account
+                      </>
+                    )}
+
+                    {loginStep === 'opened' && (
+                      <>
+                        <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                              <Check className="h-4 w-4 text-green-500" />
+                            </div>
+                            <p className="text-sm">Phone number entered</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">2</div>
+                            <p className="text-sm font-medium">Login to Telegram in the opened tab</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">3</div>
+                            <p className="text-sm text-muted-foreground">Click "I'm Logged In" when done</p>
+                          </div>
+                        </div>
+                        <Button onClick={handleSaveAccount} disabled={loading || !phoneNumber} className="w-full" size="lg">
+                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                          I'm Logged In - Save Account
+                        </Button>
+                        <Button variant="ghost" onClick={() => setLoginStep('idle')} className="w-full">
+                          Start Over
                         </Button>
                       </>
                     )}
