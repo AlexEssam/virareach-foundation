@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +13,9 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Plus, Smartphone, QrCode, Trash2, Loader2, RefreshCw, 
-  Settings, CheckCircle, XCircle, Wifi, Shield, RotateCcw
+  Plus, Smartphone, Trash2, Loader2, RefreshCw, 
+  Settings, CheckCircle, XCircle, Wifi, Shield, RotateCcw,
+  ExternalLink, Download, Save
 } from "lucide-react";
 
 interface WhatsAppAccount {
@@ -51,11 +52,7 @@ export default function WhatsAppAccounts() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<WhatsAppAccount | null>(null);
-  const [qrScanning, setQrScanning] = useState(false);
-  const [qrConnected, setQrConnected] = useState(false);
   
   // Form state
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -72,12 +69,6 @@ export default function WhatsAppAccounts() {
     switchAfter: 50,
     cooldownMinutes: 30,
   });
-
-  // Generate stable QR pattern
-  const qrPattern = useMemo(() => 
-    Array.from({ length: 64 }).map(() => Math.random() > 0.5),
-    [addDialogOpen]
-  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -162,30 +153,36 @@ export default function WhatsAppAccounts() {
     setProxyPassword("");
   };
 
-  const simulateQRLogin = async (account: WhatsAppAccount) => {
-    setSelectedAccount(account);
-    setQrDialogOpen(true);
-    setQrScanning(true);
-    setQrConnected(false);
+  const handleOpenWhatsAppWeb = () => {
+    window.open('https://web.whatsapp.com/', '_blank');
+    toast({ 
+      title: "WhatsApp Web Opened", 
+      description: "Link your device in WhatsApp Web, then save your account here" 
+    });
+  };
 
-    // Simulate QR scanning process
-    setTimeout(() => {
-      setQrScanning(false);
-      setQrConnected(true);
-      
-      // Update account status
-      supabase
-        .from("whatsapp_accounts")
-        .update({ status: "active" })
-        .eq("id", account.id)
-        .then(() => {
-          fetchAccounts();
-          toast({
-            title: "Connected!",
-            description: `${account.account_name || account.phone_number} is now active`,
-          });
-        });
-    }, 3000);
+  const handleOpenWhatsAppDownload = () => {
+    window.open('https://www.whatsapp.com/download', '_blank');
+    toast({ 
+      title: "WhatsApp Download Page Opened", 
+      description: "Download WhatsApp for your device" 
+    });
+  };
+
+  const handleReconnect = async (account: WhatsAppAccount) => {
+    window.open('https://web.whatsapp.com/', '_blank');
+    toast({ 
+      title: "WhatsApp Web Opened", 
+      description: `Reconnect ${account.account_name || account.phone_number} via WhatsApp Web` 
+    });
+    
+    // Update account status to active
+    await supabase
+      .from("whatsapp_accounts")
+      .update({ status: "active" })
+      .eq("id", account.id);
+    
+    fetchAccounts();
   };
 
   const handleDeleteAccount = async (accountId: string) => {
@@ -276,8 +273,6 @@ export default function WhatsAppAccounts() {
                 setAddDialogOpen(open);
                 if (!open) {
                   resetForm();
-                  setQrScanning(false);
-                  setQrConnected(false);
                 }
               }}>
                 <DialogTrigger asChild>
@@ -289,160 +284,128 @@ export default function WhatsAppAccounts() {
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <QrCode className="h-5 w-5 text-[#25D366]" />
-                      Add WhatsApp Account
+                      <ExternalLink className="h-5 w-5 text-[#25D366]" />
+                      Link WhatsApp Account
                     </DialogTitle>
                     <DialogDescription>
-                      Scan QR code with WhatsApp to connect your account
+                      Open WhatsApp Web to link your device, then save your account here
                     </DialogDescription>
                   </DialogHeader>
                   
-                  <div className="py-4">
-                    {!qrConnected ? (
-                      <div className="flex flex-col items-center">
-                        {/* QR Code Display */}
-                        <div className="relative w-64 h-64 bg-white rounded-2xl p-4 mb-4">
-                          {qrScanning ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center">
-                              <Loader2 className="h-8 w-8 animate-spin text-[#25D366] mb-2" />
-                              <p className="text-sm text-gray-500">Waiting for scan...</p>
-                            </div>
-                          ) : (
-                            <>
-                              {/* Simulated QR Code Pattern */}
-                              <div className="w-full h-full grid grid-cols-8 gap-1">
-                                {qrPattern.map((isDark, i) => (
-                                  <div 
-                                    key={i} 
-                                    className={`rounded-sm ${isDark ? 'bg-gray-900' : 'bg-white'}`}
-                                  />
-                                ))}
-                              </div>
-                              {/* WhatsApp Logo in center */}
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="bg-white p-2 rounded-lg">
-                                  <Smartphone className="h-8 w-8 text-[#25D366]" />
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Instructions */}
-                        <div className="text-center space-y-3 mb-4">
-                          <p className="text-sm font-medium">How to scan:</p>
-                          <ol className="text-xs text-muted-foreground space-y-1 text-left">
-                            <li>1. Open WhatsApp on your phone</li>
-                            <li>2. Tap Menu (⋮) or Settings → Linked Devices</li>
-                            <li>3. Tap "Link a Device"</li>
-                            <li>4. Point your phone at this QR code</li>
-                          </ol>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 w-full">
-                          <Button 
-                            variant="outline" 
-                            className="flex-1"
-                            onClick={() => {
-                              // Regenerate QR code (simulate)
-                              setQrScanning(false);
-                            }}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Refresh QR
-                          </Button>
-                          <Button 
-                            className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90"
-                            onClick={() => {
-                              setQrScanning(true);
-                              // Simulate connection after 3 seconds
-                              setTimeout(() => {
-                                setQrConnected(true);
-                                setQrScanning(false);
-                              }, 3000);
-                            }}
-                            disabled={qrScanning}
-                          >
-                            {qrScanning ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <QrCode className="h-4 w-4 mr-2" />
-                            )}
-                            {qrScanning ? "Scanning..." : "Simulate Scan"}
-                          </Button>
-                        </div>
+                  <div className="py-4 space-y-6">
+                    {/* WhatsApp Logo and Instructions */}
+                    <div className="flex flex-col items-center">
+                      <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
+                        <Smartphone className="h-10 w-10 text-[#25D366]" />
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center py-4">
-                        {/* Connected Success */}
-                        <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
-                          <CheckCircle className="h-10 w-10 text-[#25D366]" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-2">Connected!</h3>
-                        <p className="text-sm text-muted-foreground mb-6 text-center">
-                          Your WhatsApp account has been linked successfully
-                        </p>
+                      <p className="text-sm text-muted-foreground text-center mb-4">
+                        Click below to open WhatsApp Web in a new tab. Link your device there, then return here to save your account.
+                      </p>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 w-full">
+                        <Button 
+                          className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90"
+                          onClick={handleOpenWhatsAppWeb}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open WhatsApp Web
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={handleOpenWhatsAppDownload}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
 
-                        {/* Account Details Form */}
-                        <div className="w-full space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="accountName">Account Name (Optional)</Label>
-                            <Input
-                              id="accountName"
-                              placeholder="e.g., Business Account"
-                              value={accountName}
-                              onChange={(e) => setAccountName(e.target.value)}
-                            />
-                          </div>
+                    {/* Instructions */}
+                    <div className="bg-secondary/50 rounded-lg p-4">
+                      <p className="text-sm font-medium mb-2">How to link:</p>
+                      <ol className="text-xs text-muted-foreground space-y-1">
+                        <li>1. Open WhatsApp Web in the new tab</li>
+                        <li>2. On your phone, open WhatsApp → Settings → Linked Devices</li>
+                        <li>3. Tap "Link a Device" and scan the QR code</li>
+                        <li>4. Return here and enter your phone number below</li>
+                      </ol>
+                    </div>
+
+                    {/* Account Details Form */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phoneNumber">Phone Number *</Label>
+                        <Input
+                          id="phoneNumber"
+                          placeholder="+1234567890"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="accountName">Account Name (Optional)</Label>
+                        <Input
+                          id="accountName"
+                          placeholder="e.g., Business Account"
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                        />
+                      </div>
+                      
+                      <Button 
+                        className="w-full bg-[#25D366] hover:bg-[#25D366]/90"
+                        onClick={async () => {
+                          if (!phoneNumber.trim()) {
+                            toast({ 
+                              title: "Error", 
+                              description: "Please enter your phone number", 
+                              variant: "destructive" 
+                            });
+                            return;
+                          }
                           
-                          <Button 
-                            className="w-full bg-[#25D366] hover:bg-[#25D366]/90"
-                            onClick={async () => {
-                              setAdding(true);
-                              try {
-                                const { error } = await supabase
-                                  .from("whatsapp_accounts")
-                                  .insert({
-                                    user_id: user!.id,
-                                    phone_number: `+${Math.floor(Math.random() * 9000000000) + 1000000000}`,
-                                    account_name: accountName.trim() || `WhatsApp Account ${accounts.length + 1}`,
-                                    status: "active",
-                                  });
+                          setAdding(true);
+                          try {
+                            const { error } = await supabase
+                              .from("whatsapp_accounts")
+                              .insert({
+                                user_id: user!.id,
+                                phone_number: phoneNumber.trim(),
+                                account_name: accountName.trim() || null,
+                                status: "active",
+                              });
 
-                                if (error) throw error;
+                            if (error) throw error;
 
-                                toast({
-                                  title: "Account Added!",
-                                  description: "WhatsApp account connected successfully",
-                                });
-                                
-                                setAddDialogOpen(false);
-                                resetForm();
-                                setQrConnected(false);
-                                fetchAccounts();
-                              } catch (error: any) {
-                                toast({
-                                  title: "Error",
-                                  description: error.message || "Failed to save account",
-                                  variant: "destructive",
-                                });
-                              } finally {
-                                setAdding(false);
-                              }
-                            }}
-                            disabled={adding}
-                          >
-                            {adding ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                            )}
-                            Save Account
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                            toast({
+                              title: "Account Added!",
+                              description: "WhatsApp account saved successfully",
+                            });
+                            
+                            setAddDialogOpen(false);
+                            resetForm();
+                            fetchAccounts();
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.message || "Failed to save account",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setAdding(false);
+                          }
+                        }}
+                        disabled={adding}
+                      >
+                        {adding ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Account
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -595,10 +558,10 @@ export default function WhatsAppAccounts() {
                           <Button 
                             variant="glow" 
                             size="sm"
-                            onClick={() => simulateQRLogin(account)}
+                            onClick={() => handleReconnect(account)}
                           >
-                            <QrCode className="h-4 w-4 mr-1" />
-                            Scan QR
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Connect
                           </Button>
                         ) : account.status === "active" ? (
                           <Button 
@@ -613,7 +576,7 @@ export default function WhatsAppAccounts() {
                           <Button 
                             variant="glow" 
                             size="sm"
-                            onClick={() => simulateQRLogin(account)}
+                            onClick={() => handleReconnect(account)}
                           >
                             <RefreshCw className="h-4 w-4 mr-1" />
                             Reconnect
@@ -635,63 +598,6 @@ export default function WhatsAppAccounts() {
             </div>
           )}
 
-          {/* QR Code Login Dialog */}
-          <Dialog open={qrDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              setQrScanning(false);
-              setQrConnected(false);
-            }
-            setQrDialogOpen(open);
-          }}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Scan QR Code</DialogTitle>
-                <DialogDescription>
-                  {selectedAccount?.account_name || selectedAccount?.phone_number}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex flex-col items-center justify-center py-8">
-                {qrScanning ? (
-                  <>
-                    <div className="relative w-48 h-48 bg-secondary/50 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center mb-4">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <QrCode className="h-24 w-24 text-primary/50" />
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-32 h-32 border-4 border-primary/30 rounded-lg animate-pulse" />
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 h-1 bg-primary/20 rounded overflow-hidden">
-                        <div className="h-full bg-primary animate-[progress_3s_ease-in-out]" 
-                             style={{ animation: "progress 3s ease-in-out forwards" }} />
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground animate-pulse">
-                      Waiting for scan...
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Open WhatsApp on your phone → Settings → Linked Devices
-                    </p>
-                  </>
-                ) : qrConnected ? (
-                  <>
-                    <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
-                      <CheckCircle className="h-10 w-10 text-[#25D366]" />
-                    </div>
-                    <p className="text-lg font-medium text-[#25D366]">Connected!</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Account is now active and ready to use
-                    </p>
-                    <Button 
-                      className="mt-4" 
-                      onClick={() => setQrDialogOpen(false)}
-                    >
-                      Done
-                    </Button>
-                  </>
-                ) : null}
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* Rotation Settings Dialog */}
           <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
