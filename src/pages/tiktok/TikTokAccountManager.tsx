@@ -342,9 +342,6 @@ export default function TikTokAccountManager() {
                           <UserPlus className="mr-2 h-4 w-4" />
                           Open TikTok Sign Up
                         </Button>
-                        <p className="text-xs text-muted-foreground mt-3 p-2 bg-muted/50 rounded-md">
-                          💡 <strong>Tip:</strong> If "Open" buttons launch ChromeDriver instead of your browser, use the Copy button and paste the URL manually into Chrome/Firefox.
-                        </p>
                       </>
                     )}
                     {loginStep === 'success' && (
