@@ -212,9 +212,6 @@ export default function PinterestAccounts() {
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mb-4">
-                    💡 <strong>Tip:</strong> If "Open" buttons launch ChromeDriver instead of your browser, use the Copy button and paste the URL manually into Chrome/Firefox.
-                  </p>
                   <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Username *</Label>
