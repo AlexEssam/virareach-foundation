@@ -4,12 +4,13 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Volume2, Mic, Sparkles, Loader2, Upload, Play, Pause, Copy, LogIn, Check, User, UserCircle } from "lucide-react";
+import { Volume2, Mic, Sparkles, Loader2, Upload, Play, Pause, Copy, LogIn, Check, User, UserCircle, Settings, Key, Trash2, Star, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 // All 20 ElevenLabs voices with proper IDs and descriptions
@@ -36,16 +37,33 @@ const voices = [
   { id: "pqHfZKP75CvOlQylNhV4", name: "Bill", description: "Older male, wise and trustworthy", gender: "male" },
 ];
 
+interface CustomVoice {
+  id: string;
+  name: string;
+  description: string | null;
+  elevenlabs_voice_id: string;
+  sample_file_name: string | null;
+  created_at: string;
+}
+
 export default function AIAudioModule() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
+  const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
+
+  // API Key state
+  const [apiKey, setApiKey] = useState("");
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [savingApiKey, setSavingApiKey] = useState(false);
+  const [checkingApiKey, setCheckingApiKey] = useState(true);
 
   // TTS state
   const [ttsText, setTtsText] = useState("");
   const [selectedVoice, setSelectedVoice] = useState(voices[0].id);
+  const [selectedVoiceName, setSelectedVoiceName] = useState(voices[0].name);
 
   // Voice preview state
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
@@ -54,9 +72,22 @@ export default function AIAudioModule() {
 
   // Voice clone state
   const [voiceSample, setVoiceSample] = useState<File | null>(null);
+  const [voiceName, setVoiceName] = useState("");
+  const [voiceDescription, setVoiceDescription] = useState("");
+  const [customVoices, setCustomVoices] = useState<CustomVoice[]>([]);
+  const [loadingCustomVoices, setLoadingCustomVoices] = useState(false);
+  const [cloningVoice, setCloningVoice] = useState(false);
 
   // Audio clean state
   const [audioFile, setAudioFile] = useState<File | null>(null);
+
+  // Check if user has API key on mount
+  useEffect(() => {
+    if (user) {
+      checkApiKey();
+      fetchCustomVoices();
+    }
+  }, [user]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -68,8 +99,65 @@ export default function AIAudioModule() {
     };
   }, []);
 
+  const checkApiKey = async () => {
+    setCheckingApiKey(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { action: 'check_api_key' }
+      });
+      if (!error && data) {
+        setHasApiKey(data.has_api_key);
+      }
+    } catch (e) {
+      console.error("Failed to check API key:", e);
+    } finally {
+      setCheckingApiKey(false);
+    }
+  };
+
+  const saveApiKey = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter your API key");
+      return;
+    }
+
+    setSavingApiKey(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { action: 'save_api_key', api_key: apiKey }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setHasApiKey(true);
+      setApiKey("");
+      toast.success("API key saved successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save API key");
+    } finally {
+      setSavingApiKey(false);
+    }
+  };
+
+  const fetchCustomVoices = async () => {
+    setLoadingCustomVoices(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { action: 'list_custom_voices' }
+      });
+
+      if (!error && data?.voices) {
+        setCustomVoices(data.voices);
+      }
+    } catch (e) {
+      console.error("Failed to fetch custom voices:", e);
+    } finally {
+      setLoadingCustomVoices(false);
+    }
+  };
+
   const handlePlayVoice = async (voiceId: string, voiceName: string) => {
-    // If same voice is playing, stop it
     if (playingVoice === voiceId) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -79,7 +167,6 @@ export default function AIAudioModule() {
       return;
     }
 
-    // Stop any currently playing audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -89,7 +176,6 @@ export default function AIAudioModule() {
     setPlayingVoice(null);
 
     try {
-      // Use ElevenLabs preview samples endpoint
       const sampleUrl = `https://api.elevenlabs.io/v1/voices/${voiceId}/preview`;
       
       const audio = new Audio(sampleUrl);
@@ -109,7 +195,7 @@ export default function AIAudioModule() {
       audio.onerror = () => {
         setLoadingVoice(null);
         setPlayingVoice(null);
-        toast.error(`Preview for ${voiceName} unavailable. Configure ElevenLabs API key for full access.`);
+        toast.error(`Preview for ${voiceName} unavailable.`);
       };
 
       audio.load();
@@ -123,6 +209,7 @@ export default function AIAudioModule() {
   const callAudioAPI = async (action: string, params: Record<string, any>) => {
     setLoading(true);
     setResult("");
+    setGeneratedAudio(null);
     try {
       const { data, error } = await supabase.functions.invoke('ai-audio', {
         body: { action, ...params }
@@ -131,8 +218,13 @@ export default function AIAudioModule() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setResult(data.result || data.message || "Operation completed");
-      toast.success(data.message || "Operation completed successfully!");
+      if (data.audio_base64) {
+        setGeneratedAudio(`data:audio/mpeg;base64,${data.audio_base64}`);
+        toast.success("Audio generated successfully!");
+      } else {
+        setResult(data.result || data.message || "Operation completed");
+        toast.success(data.message || "Operation completed successfully!");
+      }
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Failed to process audio");
@@ -149,12 +241,62 @@ export default function AIAudioModule() {
     callAudioAPI("tts", { text: ttsText, voice_id: selectedVoice });
   };
 
-  const handleVoiceClone = () => {
+  const handleVoiceClone = async () => {
+    if (!voiceName.trim()) {
+      toast.error("Please enter a voice name");
+      return;
+    }
     if (!voiceSample) {
       toast.error("Please upload a voice sample");
       return;
     }
-    callAudioAPI("voice_clone", { voice_sample: voiceSample.name });
+
+    setCloningVoice(true);
+    try {
+      // Convert file to base64
+      const arrayBuffer = await voiceSample.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { 
+          action: 'voice_clone',
+          voice_name: voiceName,
+          voice_description: voiceDescription,
+          audio_base64: base64,
+          file_name: voiceSample.name
+        }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      toast.success("Voice cloned successfully!");
+      setVoiceName("");
+      setVoiceDescription("");
+      setVoiceSample(null);
+      fetchCustomVoices();
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast.error(error.message || "Failed to clone voice");
+    } finally {
+      setCloningVoice(false);
+    }
+  };
+
+  const handleDeleteCustomVoice = async (voiceId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { action: 'delete_custom_voice', voice_id: voiceId }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      toast.success("Voice deleted successfully!");
+      fetchCustomVoices();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete voice");
+    }
   };
 
   const handleAudioClean = () => {
@@ -166,14 +308,20 @@ export default function AIAudioModule() {
     toast.success("Copied to clipboard!");
   };
 
+  const selectVoice = (id: string, name: string) => {
+    setSelectedVoice(id);
+    setSelectedVoiceName(name);
+  };
+
   const maleVoices = voices.filter(v => v.gender === "male");
   const femaleVoices = voices.filter(v => v.gender === "female");
   const neutralVoices = voices.filter(v => v.gender === "neutral");
 
-  const VoiceCard = ({ voice }: { voice: typeof voices[0] }) => {
-    const isSelected = selectedVoice === voice.id;
-    const isPlaying = playingVoice === voice.id;
-    const isLoadingPreview = loadingVoice === voice.id;
+  const VoiceCard = ({ voice, isCustom = false }: { voice: typeof voices[0] | CustomVoice; isCustom?: boolean }) => {
+    const voiceId = isCustom ? (voice as CustomVoice).elevenlabs_voice_id : voice.id;
+    const isSelected = selectedVoice === voiceId;
+    const isPlaying = playingVoice === voiceId;
+    const isLoadingPreview = loadingVoice === voiceId;
 
     return (
       <div
@@ -182,7 +330,7 @@ export default function AIAudioModule() {
             ? "border-primary bg-primary/10"
             : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-card"
         }`}
-        onClick={() => setSelectedVoice(voice.id)}
+        onClick={() => selectVoice(voiceId, voice.name)}
       >
         <div className="flex items-center gap-3">
           <Button
@@ -193,7 +341,7 @@ export default function AIAudioModule() {
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              handlePlayVoice(voice.id, voice.name);
+              handlePlayVoice(voiceId, voice.name);
             }}
             disabled={isLoadingPreview}
           >
@@ -207,13 +355,27 @@ export default function AIAudioModule() {
           </Button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
+              {isCustom && <Star className="h-3.5 w-3.5 text-yellow-500" />}
               <span className="font-medium text-sm">{voice.name}</span>
               {isSelected && (
                 <Check className="h-3.5 w-3.5 text-primary shrink-0" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground truncate">{voice.description}</p>
+            <p className="text-xs text-muted-foreground truncate">{voice.description || "Custom voice"}</p>
           </div>
+          {isCustom && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteCustomVoice((voice as CustomVoice).id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -262,14 +424,79 @@ export default function AIAudioModule() {
             <p className="text-muted-foreground">Text-to-speech with 20 premium voices, voice cloning, and audio enhancement</p>
           </div>
 
+          {/* API Key Settings Card */}
+          <Card variant="glass" className="animate-fade-in">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Settings className="h-5 w-5 text-primary" />
+                ElevenLabs Settings
+              </CardTitle>
+              <CardDescription>
+                Add your ElevenLabs API key to enable voice cloning and TTS generation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {checkingApiKey ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Checking API key status...</span>
+                </div>
+              ) : hasApiKey ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-green-500">
+                    <Check className="h-5 w-5" />
+                    <span className="font-medium">API key configured</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHasApiKey(false)}
+                  >
+                    Update Key
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="password"
+                        placeholder="Enter your ElevenLabs API key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={saveApiKey} disabled={savingApiKey}>
+                      {savingApiKey ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Key className="h-4 w-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                  <a
+                    href="https://elevenlabs.io/app/settings/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    Get your API key from elevenlabs.io
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card variant="glass" className="animate-fade-in">
               <CardContent className="p-4 flex items-center gap-3">
                 <Volume2 className="h-8 w-8 text-blue-400" />
                 <div>
-                  <p className="text-2xl font-bold">20 Voices</p>
-                  <p className="text-xs text-muted-foreground">Premium AI voices</p>
+                  <p className="text-2xl font-bold">{20 + customVoices.length} Voices</p>
+                  <p className="text-xs text-muted-foreground">Premium + Custom</p>
                 </div>
               </CardContent>
             </Card>
@@ -277,8 +504,8 @@ export default function AIAudioModule() {
               <CardContent className="p-4 flex items-center gap-3">
                 <Mic className="h-8 w-8 text-pink-400" />
                 <div>
-                  <p className="text-2xl font-bold">Voice Clone</p>
-                  <p className="text-xs text-muted-foreground">Clone any voice</p>
+                  <p className="text-2xl font-bold">{customVoices.length} Cloned</p>
+                  <p className="text-xs text-muted-foreground">Your custom voices</p>
                 </div>
               </CardContent>
             </Card>
@@ -308,6 +535,21 @@ export default function AIAudioModule() {
               <CardContent>
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-4">
+                    {/* Custom Voices */}
+                    {customVoices.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium text-muted-foreground">My Voices ({customVoices.length})</span>
+                        </div>
+                        <div className="grid gap-2">
+                          {customVoices.map((voice) => (
+                            <VoiceCard key={voice.id} voice={voice} isCustom={true} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Female Voices */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -375,12 +617,7 @@ export default function AIAudioModule() {
                         <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                           <div className="flex items-center gap-2">
                             <Volume2 className="h-4 w-4 text-primary" />
-                            <span className="font-medium">
-                              {voices.find(v => v.id === selectedVoice)?.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              - {voices.find(v => v.id === selectedVoice)?.description}
-                            </span>
+                            <span className="font-medium">{selectedVoiceName}</span>
                           </div>
                         </div>
                       </div>
@@ -393,22 +630,40 @@ export default function AIAudioModule() {
                           rows={4}
                         />
                       </div>
-                      <Button onClick={handleTTS} disabled={loading} variant="glow" className="w-full">
+                      <Button onClick={handleTTS} disabled={loading || !hasApiKey} variant="glow" className="w-full">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
                         Generate Speech
                       </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Note: For actual audio generation, ElevenLabs API integration is required.
-                      </p>
+                      {!hasApiKey && (
+                        <p className="text-xs text-amber-500">
+                          Add your ElevenLabs API key above to generate audio.
+                        </p>
+                      )}
                     </TabsContent>
 
                     <TabsContent value="clone" className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <Label>Voice Sample</Label>
+                        <Label>Voice Name *</Label>
+                        <Input
+                          placeholder="e.g., My Professional Voice"
+                          value={voiceName}
+                          onChange={(e) => setVoiceName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description (optional)</Label>
+                        <Input
+                          placeholder="e.g., Warm, professional tone"
+                          value={voiceDescription}
+                          onChange={(e) => setVoiceDescription(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Voice Sample *</Label>
                         <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                           <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground mb-2">
-                            Upload a voice sample (min 30 seconds)
+                            Upload a voice sample (min 30 seconds, MP3/WAV)
                           </p>
                           <input
                             type="file"
@@ -427,13 +682,20 @@ export default function AIAudioModule() {
                           )}
                         </div>
                       </div>
-                      <Button onClick={handleVoiceClone} disabled={loading} variant="glow" className="w-full">
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mic className="h-4 w-4 mr-2" />}
+                      <Button 
+                        onClick={handleVoiceClone} 
+                        disabled={cloningVoice || !hasApiKey} 
+                        variant="glow" 
+                        className="w-full"
+                      >
+                        {cloningVoice ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mic className="h-4 w-4 mr-2" />}
                         Clone Voice
                       </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Requires ElevenLabs API key for voice cloning functionality.
-                      </p>
+                      {!hasApiKey && (
+                        <p className="text-xs text-amber-500">
+                          Add your ElevenLabs API key above to clone voices.
+                        </p>
+                      )}
                     </TabsContent>
 
                     <TabsContent value="clean" className="space-y-4 mt-4">
@@ -491,6 +753,13 @@ export default function AIAudioModule() {
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                       <Loader2 className="h-10 w-10 animate-spin mb-3" />
                       <p>Processing...</p>
+                    </div>
+                  ) : generatedAudio ? (
+                    <div className="space-y-3">
+                      <audio controls className="w-full" src={generatedAudio} />
+                      <p className="text-sm text-muted-foreground text-center">
+                        Generated audio ready to play
+                      </p>
                     </div>
                   ) : result ? (
                     <div className="p-4 rounded-lg bg-muted/30 border border-border/50 whitespace-pre-wrap max-h-[200px] overflow-y-auto text-sm">
