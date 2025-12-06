@@ -91,19 +91,38 @@ serve(async (req) => {
       account = data;
     }
 
-    // Check if we can use real API
+    // If account doesn't have api_id/api_hash, try to get global credentials from profiles
+    let apiId = account?.api_id;
+    let apiHash = account?.api_hash;
+    
+    if ((!apiId || !apiHash) && user.id) {
+      console.log(`[telegram-extract] Account missing API credentials, checking global settings...`);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('telegram_api_id, telegram_api_hash')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.telegram_api_id && profile?.telegram_api_hash) {
+        apiId = profile.telegram_api_id;
+        apiHash = profile.telegram_api_hash;
+        console.log(`[telegram-extract] Using global API credentials from profile`);
+      }
+    }
+
+    // Check if we can use real API (now using resolved apiId/apiHash)
     const canUseRealApi = mtprotoProxyUrl && 
-      account?.api_id && 
-      account?.api_hash && 
+      apiId && 
+      apiHash && 
       account?.session_data;
 
-    console.log(`[telegram-extract] Can use real API: ${canUseRealApi}, Proxy: ${mtprotoProxyUrl ? 'configured' : 'not configured'}, Account: ${account?.phone_number || 'none'}`);
+    console.log(`[telegram-extract] Can use real API: ${canUseRealApi}, Proxy: ${mtprotoProxyUrl ? 'configured' : 'not configured'}, Account: ${account?.phone_number || 'none'}, API ID: ${apiId ? 'set' : 'missing'}`);
 
-    // Helper function to call MTProto proxy
+    // Helper function to call MTProto proxy (uses resolved apiId/apiHash)
     async function callProxy(endpoint: string, body: any): Promise<any> {
       if (!mtprotoProxyUrl) throw new Error('MTProto proxy URL not configured');
-      if (!account?.api_id || !account?.api_hash || !account?.session_data) {
-        throw new Error('Account missing API credentials or session');
+      if (!apiId || !apiHash || !account?.session_data) {
+        throw new Error('Missing API credentials or session');
       }
       
       console.log(`[telegram-extract] Calling proxy: ${mtprotoProxyUrl}${endpoint}`);
@@ -112,8 +131,8 @@ serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          apiId: account.api_id,
-          apiHash: account.api_hash,
+          apiId: apiId,
+          apiHash: apiHash,
           sessionString: account.session_data,
           ...body
         })
