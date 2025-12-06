@@ -546,13 +546,18 @@ export default function TelegramAccountManager() {
                                     API ✓
                                   </Badge>
                                 )}
-                                {(account as any).session_data && (
+                                {(account as any).session_data && !((account as any).session_data?.trim()?.startsWith('{')) && (account as any).session_data?.length > 100 ? (
                                   <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
                                     <Check className="h-3 w-3 mr-1" />
                                     Session ✓
                                   </Badge>
-                                )}
-                                {!account.api_id && !(account as any).session_data && (
+                                ) : (account as any).session_data ? (
+                                  <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
+                                    <X className="h-3 w-3 mr-1" />
+                                    Invalid Session
+                                  </Badge>
+                                ) : null}
+                                {(!account.api_id || !(account as any).session_data || ((account as any).session_data?.trim()?.startsWith('{'))) && (
                                   <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
                                     Mock Data Only
                                   </Badge>
@@ -1025,15 +1030,85 @@ export default function TelegramAccountManager() {
                 </CardContent>
               </Card>
 
+              {/* Session Status Card */}
+              <Card className="border-amber-500/30 bg-amber-500/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Session String Status
+                  </CardTitle>
+                  <CardDescription>
+                    Each account needs a valid session string for real data extraction
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-background border rounded-lg space-y-3">
+                    <p className="text-sm font-medium">Why are extractions returning 0 results?</p>
+                    <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                      <li>Your accounts have <strong>login metadata</strong> stored, not a valid <strong>GramJS session string</strong></li>
+                      <li>A valid session string is a long (200+ characters) base64-encoded string</li>
+                      <li>Without it, the app falls back to <strong>mock data</strong> (currently returning empty results due to API issues)</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <p className="text-sm font-medium">Your Accounts:</p>
+                    {accounts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No accounts added yet</p>
+                    ) : (
+                      accounts.map((account) => {
+                        const sessionData = (account as any).session_data;
+                        const isValidSession = sessionData && typeof sessionData === 'string' && !sessionData.trim().startsWith('{') && sessionData.length > 100;
+                        return (
+                          <div key={account.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">{account.account_name || account.phone_number}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isValidSession ? (
+                                <Badge className="bg-green-500/20 text-green-600 border-green-500/20">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Valid Session
+                                </Badge>
+                              ) : sessionData ? (
+                                <Badge className="bg-red-500/20 text-red-600 border-red-500/20">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Invalid (Metadata Only)
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/20">
+                                  No Session
+                                </Badge>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(account)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
-                  <CardTitle>How to Get Session String</CardTitle>
+                  <CardTitle>How to Get a Valid Session String</CardTitle>
                   <CardDescription>Required for each account to enable real API extraction</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                    <p className="text-sm font-medium mb-2">What is a session string?</p>
+                    <p className="text-sm text-muted-foreground">
+                      A session string is a long base64-encoded token (200+ characters) that authenticates your Telegram account via the MTProto API. 
+                      It's generated when you login using the Telethon library. The "login metadata" stored when you click "I'm Logged In" is NOT a session string.
+                    </p>
+                  </div>
+                  
                   <p className="text-sm text-muted-foreground">
-                    After saving your global API credentials, you'll need to generate a session string for each Telegram account. 
-                    Use this Python script:
+                    After saving your global API credentials, generate a session string for each Telegram account using this Python script:
                   </p>
                   <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
 {`pip install telethon
@@ -1051,7 +1126,8 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
 "`}
                   </pre>
                   <p className="text-sm text-muted-foreground">
-                    Run this script, login with your phone number, and copy the output session string to use when adding accounts.
+                    Run this script, login with your phone number when prompted, and copy the output session string. 
+                    Then click the <strong>Edit</strong> button on your account above and paste it into the Session String field.
                   </p>
                 </CardContent>
               </Card>
