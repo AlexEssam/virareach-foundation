@@ -47,26 +47,64 @@ serve(async (req) => {
 
     console.log(`AI Video action: ${action}, user: ${user.id}`);
 
-    // Helper function to extract image from response
-    const extractImage = (data: any): string | null => {
-      // Check various response formats
+    // Helper function to extract image from response with detailed logging
+    const extractImage = (data: any, actionName: string): string | null => {
+      console.log(`[${actionName}] Extracting image from response...`);
+      
       const message = data.choices?.[0]?.message;
-      if (message?.images?.[0]?.image_url?.url) {
-        return message.images[0].image_url.url;
+      if (!message) {
+        console.log(`[${actionName}] No message in response`);
+        return null;
       }
-      if (message?.content && typeof message.content === 'string') {
-        // Check if content contains base64 image
+
+      // Format 1: images array (Lovable AI Gateway format)
+      if (message.images && Array.isArray(message.images) && message.images.length > 0) {
+        const imageUrl = message.images[0]?.image_url?.url;
+        if (imageUrl) {
+          console.log(`[${actionName}] Found image in images array`);
+          return imageUrl;
+        }
+      }
+
+      // Format 2: Base64 in content string
+      if (message.content && typeof message.content === 'string') {
         const base64Match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-        if (base64Match) return base64Match[0];
+        if (base64Match) {
+          console.log(`[${actionName}] Found base64 image in content string`);
+          return base64Match[0];
+        }
       }
-      // Check for inline_data format
-      if (message?.content && Array.isArray(message.content)) {
+
+      // Format 3: Content array with image parts
+      if (message.content && Array.isArray(message.content)) {
         for (const part of message.content) {
           if (part.type === 'image' && part.image_url?.url) {
+            console.log(`[${actionName}] Found image in content array`);
+            return part.image_url.url;
+          }
+          if (part.type === 'image_url' && part.image_url?.url) {
+            console.log(`[${actionName}] Found image_url in content array`);
             return part.image_url.url;
           }
         }
       }
+
+      // Format 4: Direct URL in response
+      if (data.url) {
+        console.log(`[${actionName}] Found direct URL in response`);
+        return data.url;
+      }
+
+      console.log(`[${actionName}] No image found. Message keys:`, Object.keys(message));
+      console.log(`[${actionName}] Message content type:`, typeof message.content);
+      if (message.content) {
+        console.log(`[${actionName}] Content preview:`, 
+          typeof message.content === 'string' 
+            ? message.content.slice(0, 200) 
+            : JSON.stringify(message.content).slice(0, 200)
+        );
+      }
+      
       return null;
     };
 
@@ -105,15 +143,19 @@ serve(async (req) => {
         }
 
         const data = await response.json();
-        console.log('Generate video response:', JSON.stringify(data).slice(0, 500));
+        console.log('Generate video full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'generate_video');
         const textResponse = data.choices?.[0]?.message?.content;
+        
+        console.log('Generate video - imageUrl found:', !!imageUrl);
+        console.log('Generate video - textResponse found:', !!textResponse);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
           storyboard: typeof textResponse === 'string' ? textResponse : null,
-          meta: { model: 'gemini-2.5-flash-image', prompt, duration: duration || '5s' }
+          meta: { model: 'gemini-2.5-flash-image', prompt, duration: duration || '5s' },
+          debug: { hasImage: !!imageUrl, hasText: typeof textResponse === 'string' }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -159,14 +201,16 @@ serve(async (req) => {
         }
         
         const data = await response.json();
-        console.log('Image to video response:', JSON.stringify(data).slice(0, 500));
+        console.log('Image to video full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'image_to_video');
+        console.log('Image to video - imageUrl found:', !!imageUrl);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
           motion_style,
-          frames: [image, imageUrl].filter(Boolean)
+          frames: [image, imageUrl].filter(Boolean),
+          debug: { hasImage: !!imageUrl }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -199,11 +243,12 @@ serve(async (req) => {
         }
         
         const data = await response.json();
-        console.log('Motion sync response:', JSON.stringify(data).slice(0, 500));
+        console.log('Motion sync full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'motion_sync');
+        console.log('Motion sync - imageUrl found:', !!imageUrl);
         
-        return new Response(JSON.stringify({ video_url: imageUrl }), {
+        return new Response(JSON.stringify({ video_url: imageUrl, debug: { hasImage: !!imageUrl } }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -235,13 +280,15 @@ serve(async (req) => {
         }
         
         const data = await response.json();
-        console.log('Lip sync response:', JSON.stringify(data).slice(0, 500));
+        console.log('Lip sync full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'lip_sync');
+        console.log('Lip sync - imageUrl found:', !!imageUrl);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
-          frames: [image, imageUrl].filter(Boolean)
+          frames: [image, imageUrl].filter(Boolean),
+          debug: { hasImage: !!imageUrl }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -275,11 +322,12 @@ serve(async (req) => {
         }
         
         const data = await response.json();
-        console.log('Replace character response:', JSON.stringify(data).slice(0, 500));
+        console.log('Replace character full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'replace_character');
+        console.log('Replace character - imageUrl found:', !!imageUrl);
         
-        return new Response(JSON.stringify({ video_url: imageUrl }), {
+        return new Response(JSON.stringify({ video_url: imageUrl, debug: { hasImage: !!imageUrl } }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -311,13 +359,15 @@ serve(async (req) => {
         }
         
         const data = await response.json();
-        console.log('Video upscale response:', JSON.stringify(data).slice(0, 500));
+        console.log('Video upscale full response:', JSON.stringify(data));
         
-        const imageUrl = extractImage(data);
+        const imageUrl = extractImage(data, 'video_upscale');
+        console.log('Video upscale - imageUrl found:', !!imageUrl);
         
         return new Response(JSON.stringify({ 
           video_url: imageUrl,
-          resolution: resolution || '4K'
+          resolution: resolution || '4K',
+          debug: { hasImage: !!imageUrl }
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

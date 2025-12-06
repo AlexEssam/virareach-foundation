@@ -27,10 +27,12 @@ export default function AIVideoModule() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     video_url?: string;
     frames?: string[];
     storyboard?: string;
+    debug?: { hasImage?: boolean; hasText?: boolean };
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const secondFileInputRef = useRef<HTMLInputElement>(null);
@@ -57,19 +59,30 @@ export default function AIVideoModule() {
   const callAIVideo = async (action: string, params: Record<string, any>) => {
     setLoading(true);
     setResult(null);
+    setError(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('ai-video', {
+      const { data, error: fnError } = await supabase.functions.invoke('ai-video', {
         body: { action, ...params }
       });
 
-      if (error) throw error;
+      if (fnError) throw fnError;
       
+      console.log('AI Video result:', data);
       setResult(data);
-      toast.success("Video processed successfully!");
-    } catch (error: any) {
-      console.error('AI Video error:', error);
-      toast.error(error.message || "Failed to process video");
+      
+      // Check if we got any actual content
+      const hasContent = data?.video_url || data?.storyboard || (data?.frames && data.frames.length > 0);
+      if (hasContent) {
+        toast.success("Video processed successfully!");
+      } else {
+        toast.warning("Processing complete but no image was generated. Try a different prompt.");
+      }
+    } catch (err: any) {
+      console.error('AI Video error:', err);
+      const errorMessage = err.message || "Failed to process video";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -95,8 +108,20 @@ export default function AIVideoModule() {
     { id: 'pulse', name: 'Pulse' },
   ];
 
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-6 overflow-auto flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
   // Show login prompt if not authenticated
-  if (!authLoading && !user) {
+  if (!user) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
@@ -423,6 +448,25 @@ export default function AIVideoModule() {
             </TabsContent>
           </Tabs>
 
+          {/* Error Section */}
+          {error && (
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">Error</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-destructive">{error}</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setError(null)}
+                >
+                  Dismiss
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Results Section */}
           {result && (
             <Card>
@@ -458,6 +502,14 @@ export default function AIVideoModule() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+                {/* Show message if no content */}
+                {!result.video_url && !result.storyboard && (!result.frames || result.frames.length === 0) && (
+                  <div className="text-center py-8">
+                    <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No image was generated. The AI may not have understood the request.</p>
+                    <p className="text-sm text-muted-foreground mt-2">Try a different prompt or image.</p>
                   </div>
                 )}
               </CardContent>
