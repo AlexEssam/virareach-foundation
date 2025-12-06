@@ -90,17 +90,25 @@ export default function TelegramExtractor() {
     }
   }, [user]);
 
-  // Auto-refresh when there are processing extractions
+  // Auto-refresh when there are processing extractions (with race condition fix)
   useEffect(() => {
     const hasProcessing = extractions.some(e => e.status === 'processing');
+    let isActive = true;
     
     if (hasProcessing) {
       const interval = setInterval(() => {
-        fetchData();
+        if (isActive) {
+          fetchData();
+        }
       }, 5000);
       
-      return () => clearInterval(interval);
+      return () => {
+        isActive = false;
+        clearInterval(interval);
+      };
     }
+    
+    return () => { isActive = false; };
   }, [extractions]);
 
   const fetchData = async () => {
@@ -196,16 +204,41 @@ export default function TelegramExtractor() {
     toast({ title: "Downloaded", description: `${filteredResults.length} ${format.toUpperCase()} records downloaded` });
   };
 
+  // Validate group link format
+  const validateGroupLink = (link: string): { valid: boolean; message?: string } => {
+    const trimmed = link.trim();
+    if (!trimmed) return { valid: false, message: "Please enter a group link" };
+    
+    // Valid formats: https://t.me/group, t.me/group, @group, group, joinchat links
+    const validPatterns = [
+      /^https?:\/\/t\.me\/[a-zA-Z0-9_]+$/,
+      /^https?:\/\/t\.me\/joinchat\/[a-zA-Z0-9_-]+$/,
+      /^https?:\/\/t\.me\/\+[a-zA-Z0-9_-]+$/,
+      /^t\.me\/[a-zA-Z0-9_]+$/,
+      /^@[a-zA-Z0-9_]+$/,
+      /^[a-zA-Z0-9_]+$/,
+    ];
+    
+    const isValid = validPatterns.some(pattern => pattern.test(trimmed));
+    if (!isValid) {
+      return { valid: false, message: "Invalid format. Use: https://t.me/group, @group, or groupname" };
+    }
+    return { valid: true };
+  };
+
   const handleExtract = async () => {
     if (!extractionType) {
       toast({ title: "Error", description: "Please select an extraction type", variant: "destructive" });
       return;
     }
 
-    // Validation based on extraction type
-    if ((extractionType === "group_members" || extractionType === "group_members_hidden" || extractionType === "hidden_members_full") && !groupLink) {
-      toast({ title: "Error", description: "Please enter a group link", variant: "destructive" });
-      return;
+    // Validation based on extraction type with improved group link validation
+    if ((extractionType === "group_members" || extractionType === "group_members_hidden" || extractionType === "hidden_members_full")) {
+      const validation = validateGroupLink(groupLink);
+      if (!validation.valid) {
+        toast({ title: "Error", description: validation.message, variant: "destructive" });
+        return;
+      }
     }
 
     if (extractionType === "last_seen" && !usernamesList.trim()) {
