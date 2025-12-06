@@ -126,21 +126,58 @@ export default function TelegramAccountManager() {
   };
 
   const handleSaveGlobalApiSettings = async () => {
+    // Validate both fields are filled
+    const trimmedApiId = globalApiId.trim();
+    const trimmedApiHash = globalApiHash.trim();
+
+    if (!trimmedApiId || !trimmedApiHash) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Both API ID and API Hash are required", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Validate API ID is numeric and reasonable length
+    if (!/^\d{5,12}$/.test(trimmedApiId)) {
+      toast({ 
+        title: "Invalid API ID", 
+        description: "API ID should be a numeric value (5-12 digits) from my.telegram.org", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Validate API Hash is 32 characters hex
+    if (!/^[a-f0-9]{32}$/i.test(trimmedApiHash)) {
+      toast({ 
+        title: "Invalid API Hash", 
+        description: "API Hash should be a 32-character hexadecimal string from my.telegram.org", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setSavingGlobalSettings(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({
-          telegram_api_id: globalApiId || null,
-          telegram_api_hash: globalApiHash || null
+          telegram_api_id: trimmedApiId,
+          telegram_api_hash: trimmedApiHash
         })
         .eq('id', user!.id);
 
       if (error) throw error;
 
+      // Update state with trimmed values
+      setGlobalApiId(trimmedApiId);
+      setGlobalApiHash(trimmedApiHash);
+
       // Auto-fill form with new global settings
-      setApiId(globalApiId);
-      setApiHash(globalApiHash);
+      setApiId(trimmedApiId);
+      setApiHash(trimmedApiHash);
 
       toast({ title: "Global API Settings Saved", description: "These credentials will auto-fill for new accounts" });
     } catch (error: unknown) {
