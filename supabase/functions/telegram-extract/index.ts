@@ -64,7 +64,10 @@ serve(async (req) => {
       });
     }
 
-    const { action, params } = await req.json();
+    const requestBody = await req.json();
+    const action = requestBody.action;
+    // Support both { action, params: {...} } and { action, ...params } formats
+    const params = requestBody.params || requestBody;
     console.log(`[telegram-extract] Action: ${action}, User: ${user.id}`);
 
     // Get account credentials
