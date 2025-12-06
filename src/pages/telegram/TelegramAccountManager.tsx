@@ -280,9 +280,20 @@ export default function TelegramAccountManager() {
                                   </Badge>
                                 )}
                                 {account.api_id && (
-                                  <Badge variant="outline">
+                                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
                                     <Key className="h-3 w-3 mr-1" />
-                                    API
+                                    API ✓
+                                  </Badge>
+                                )}
+                                {(account as any).session_data && (
+                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Session ✓
+                                  </Badge>
+                                )}
+                                {!account.api_id && !(account as any).session_data && (
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                    Mock Data Only
                                   </Badge>
                                 )}
                               </div>

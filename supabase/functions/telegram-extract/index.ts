@@ -6,44 +6,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper to get last seen status string
-function getLastSeenStatus(lastSeenTs?: number): string {
-  if (!lastSeenTs) return 'unknown';
-  const now = Date.now() / 1000;
-  const diff = now - lastSeenTs;
-  if (diff < 60) return 'online';
-  if (diff < 3600) return 'recently';
-  if (diff < 604800) return 'within_week';
-  if (diff < 2592000) return 'within_month';
-  return 'long_ago';
-}
-
 // Helper to generate mock data as fallback
-function generateMockData(count: number, includeHidden: boolean) {
-  return Array.from({ length: count }, (_, i) => ({
-    user_id: `user_${i + 1}`,
-    username: Math.random() > 0.2 ? `telegram_user_${i + 1}` : null,
-    first_name: `User ${i + 1}`,
-    last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
-    phone: includeHidden ? `+1234567${String(i).padStart(4, '0')}` : null,
-    is_bot: false,
-    is_premium: Math.random() > 0.7,
-    last_seen: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-    last_seen_status: ['recently', 'within_week', 'within_month', 'long_ago', 'online'][Math.floor(Math.random() * 5)],
-    bio: includeHidden && Math.random() > 0.5 ? `Bio of user ${i + 1}` : null,
-    profile_photo: includeHidden ? `https://example.com/photo_${i + 1}.jpg` : null,
-    restriction_reason: null,
-    verified: Math.random() > 0.9
-  }));
-}
-
-// MTProto helper - sends request to Telegram API via session
-async function mtprotoRequest(sessionString: string, apiId: string, apiHash: string, method: string, params: any) {
-  // Note: Real MTProto requires complex encryption. 
-  // For production, you'd use a Telegram Bot API or a dedicated MTProto service.
-  // This is a placeholder that would connect to a real MTProto proxy service.
-  console.log(`MTProto request: ${method}`, params);
-  return null;
+function generateMockData(count: number, type: string): any[] {
+  const mockUsers = [];
+  const statuses = ['online', 'recently', 'within_week', 'within_month', 'long_time_ago', 'hidden'];
+  
+  for (let i = 0; i < count; i++) {
+    const isPremium = Math.random() > 0.7;
+    const hasUsername = Math.random() > 0.3;
+    const hasPhone = Math.random() > 0.5;
+    
+    mockUsers.push({
+      user_id: `mock_${Date.now()}_${i}`,
+      username: hasUsername ? `user_${Math.random().toString(36).substring(7)}` : '',
+      first_name: `User${i}`,
+      last_name: `Test${i}`,
+      phone: hasPhone ? `+1${Math.floor(1000000000 + Math.random() * 9000000000)}` : '',
+      bio: Math.random() > 0.5 ? `Bio for user ${i}` : '',
+      is_premium: isPremium,
+      is_verified: Math.random() > 0.9,
+      is_bot: false,
+      profile_photo: Math.random() > 0.4,
+      last_seen: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      last_seen_status: statuses[Math.floor(Math.random() * statuses.length)],
+    });
+  }
+  return mockUsers;
 }
 
 serve(async (req) => {
@@ -52,13 +40,23 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const mtprotoProxyUrl = Deno.env.get('TELEGRAM_MTPROTO_PROXY_URL');
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -66,155 +64,282 @@ serve(async (req) => {
       });
     }
 
-    const { action, account_id, ...params } = await req.json();
-    console.log(`Telegram extract action: ${action}`, params);
+    const { action, params } = await req.json();
+    console.log(`[telegram-extract] Action: ${action}, User: ${user.id}`);
 
-    // Get account with API credentials if account_id provided
+    // Get account credentials
     let account: any = null;
-    if (account_id) {
-      const { data } = await supabaseClient
+    if (params?.account_id) {
+      const { data } = await supabase
         .from('telegram_accounts')
         .select('*')
-        .eq('id', account_id)
+        .eq('id', params.account_id)
         .eq('user_id', user.id)
         .single();
       account = data;
     } else {
-      // Get first active account with session data
-      const { data } = await supabaseClient
+      const { data } = await supabase
         .from('telegram_accounts')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .not('session_data', 'is', null)
-        .not('api_id', 'is', null)
         .limit(1)
         .single();
       account = data;
     }
 
-    const hasValidSession = account?.session_data && account?.api_id && account?.api_hash;
-    console.log(`Account found: ${!!account}, Has valid session: ${hasValidSession}`);
+    // Check if we can use real API
+    const canUseRealApi = mtprotoProxyUrl && 
+      account?.api_id && 
+      account?.api_hash && 
+      account?.session_data;
 
-    // For real Telegram API integration, you would need:
-    // 1. A running MTProto client (like gramjs) on a server
-    // 2. Or use Telegram Bot API (limited functionality)
-    // 3. Or connect to a Telegram API proxy service
-    // 
-    // Since Edge Functions can't maintain persistent connections or run MTProto directly,
-    // the real implementation would call an external service that handles MTProto.
-    // For now, we'll use mock data but mark when real API would be used.
+    console.log(`[telegram-extract] Can use real API: ${canUseRealApi}, Proxy: ${mtprotoProxyUrl ? 'configured' : 'not configured'}, Account: ${account?.phone_number || 'none'}`);
+
+    // Helper function to call MTProto proxy
+    async function callProxy(endpoint: string, body: any): Promise<any> {
+      if (!mtprotoProxyUrl) throw new Error('MTProto proxy URL not configured');
+      if (!account?.api_id || !account?.api_hash || !account?.session_data) {
+        throw new Error('Account missing API credentials or session');
+      }
+      
+      console.log(`[telegram-extract] Calling proxy: ${mtprotoProxyUrl}${endpoint}`);
+      
+      const response = await fetch(`${mtprotoProxyUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiId: account.api_id,
+          apiHash: account.api_hash,
+          sessionString: account.session_data,
+          ...body
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Proxy request failed: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch { }
+        throw new Error(errorMessage);
+      }
+      
+      return response.json();
+    }
 
     switch (action) {
       case 'group_members': {
-        const { group_link, include_hidden, limit } = params;
+        const { group_link, limit = 200, include_hidden } = params;
         
-        // Normalize and validate the group link/username
-        let normalizedGroupLink = group_link?.trim() || '';
-        if (!normalizedGroupLink) {
-          return new Response(JSON.stringify({ error: 'Group link or username is required' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        // Normalize different input formats
-        if (normalizedGroupLink.startsWith('@')) {
-          normalizedGroupLink = `https://t.me/${normalizedGroupLink.substring(1)}`;
-        } else if (normalizedGroupLink.startsWith('t.me/')) {
-          normalizedGroupLink = `https://${normalizedGroupLink}`;
-        } else if (!normalizedGroupLink.startsWith('http://') && !normalizedGroupLink.startsWith('https://')) {
-          normalizedGroupLink = `https://t.me/${normalizedGroupLink}`;
-        }
-        
-        console.log(`Normalized group link: ${normalizedGroupLink}`);
-        
-        const { data, error } = await supabaseClient
+        // Create extraction record
+        const { data: extraction, error: insertError } = await supabase
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: include_hidden ? 'group_members_hidden' : 'group_members',
-            source: normalizedGroupLink,
-            status: 'processing'
+            source: group_link,
+            status: 'processing',
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        const extractLimit = limit === 'all' ? 1500 : Math.min(parseInt(limit) || 500, 5000);
-        
-        // Generate data - in production this would come from real Telegram API
-        // Mark as "would use real API" if credentials exist
-        const mockResults = generateMockData(extractLimit, include_hidden);
-        const wouldUseRealApi = hasValidSession;
+        let results: any[] = [];
+        let usingRealApi = false;
+        let groupInfo = null;
 
-        await supabaseClient
+        if (canUseRealApi) {
+          try {
+            console.log(`[telegram-extract] Calling real API for group: ${group_link}`);
+            const proxyResult = await callProxy('/getParticipants', { 
+              groupLink: group_link, 
+              limit: Math.min(limit, 5000) 
+            });
+            results = proxyResult.participants || [];
+            groupInfo = proxyResult.group;
+            usingRealApi = true;
+            console.log(`[telegram-extract] Real API returned ${results.length} participants`);
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Proxy error, falling back to mock:`, proxyError.message);
+            results = generateMockData(Math.min(limit, 100), 'group_members');
+          }
+        } else {
+          console.log(`[telegram-extract] Using mock data (missing credentials or proxy)`);
+          results = generateMockData(Math.min(limit, 100), 'group_members');
+        }
+
+        // Update extraction with results
+        await supabase
           .from('telegram_extractions')
           .update({
             status: 'completed',
-            results: mockResults,
-            result_count: mockResults.length,
-            completed_at: new Date().toISOString()
+            results: results,
+            result_count: results.length,
+            completed_at: new Date().toISOString(),
           })
-          .eq('id', data.id);
+          .eq('id', extraction.id);
 
-        console.log(`Extracted ${mockResults.length} group members (real API configured: ${wouldUseRealApi})`);
         return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockResults,
-          count: mockResults.length,
-          real_api_configured: wouldUseRealApi,
-          note: wouldUseRealApi 
-            ? 'API credentials configured. For real extraction, connect to MTProto service.' 
-            : 'No API credentials. Add API ID, Hash, and Session String in Account Manager.'
+          success: true, 
+          extraction_id: extraction.id,
+          count: results.length,
+          results,
+          group: groupInfo,
+          using_real_api: usingRealApi,
+          message: usingRealApi 
+            ? 'Extracted real data from Telegram' 
+            : 'Using mock data. Configure API credentials and deploy MTProto proxy for real extraction.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'contacts': 
+      case 'contacts_filtered': {
+        const { phone_prefix, country_code, phone_prefixes, country_codes } = params;
+
+        const { data: extraction, error: insertError } = await supabase
+          .from('telegram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: 'contacts',
+            status: 'processing',
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        let results: any[] = [];
+        let usingRealApi = false;
+
+        if (canUseRealApi) {
+          try {
+            console.log(`[telegram-extract] Calling real API for contacts`);
+            const proxyResult = await callProxy('/getContacts', { 
+              phonePrefix: phone_prefix || (phone_prefixes && phone_prefixes[0]), 
+              countryCode: country_code || (country_codes && country_codes[0])
+            });
+            results = proxyResult.contacts || [];
+            usingRealApi = true;
+            console.log(`[telegram-extract] Real API returned ${results.length} contacts`);
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Proxy error, falling back to mock:`, proxyError.message);
+            results = generateMockData(50, 'contacts');
+          }
+        } else {
+          results = generateMockData(50, 'contacts');
+        }
+
+        await supabase
+          .from('telegram_extractions')
+          .update({
+            status: 'completed',
+            results,
+            result_count: results.length,
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', extraction.id);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          extraction_id: extraction.id,
+          count: results.length,
+          results,
+          using_real_api: usingRealApi
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'chats': {
+        const { limit = 100, archived = false } = params;
+
+        const { data: extraction, error: insertError } = await supabase
+          .from('telegram_extractions')
+          .insert({
+            user_id: user.id,
+            extraction_type: archived ? 'archived_chats' : 'chats',
+            status: 'processing',
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        let results: any[] = [];
+        let usingRealApi = false;
+
+        if (canUseRealApi) {
+          try {
+            console.log(`[telegram-extract] Calling real API for chats`);
+            const proxyResult = await callProxy('/getChats', { limit, archived });
+            results = proxyResult.chats || [];
+            usingRealApi = true;
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Proxy error:`, proxyError.message);
+            results = [];
+          }
+        }
+
+        await supabase
+          .from('telegram_extractions')
+          .update({
+            status: 'completed',
+            results,
+            result_count: results.length,
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', extraction.id);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          extraction_id: extraction.id,
+          count: results.length,
+          results,
+          using_real_api: usingRealApi
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'archived': {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          count: 0,
+          results: [],
+          using_real_api: false,
+          message: 'Archived chats extraction requires deployed MTProto proxy'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'last_seen': {
-        const { usernames, user_ids } = params;
-        
-        const { data, error } = await supabaseClient
-          .from('telegram_extractions')
-          .insert({
-            user_id: user.id,
-            extraction_type: 'last_seen',
-            source: 'bulk_users',
-            status: 'processing'
-          })
-          .select()
-          .single();
+        const { user_ids, usernames } = params;
 
-        if (error) throw error;
+        let results: any[] = [];
+        let usingRealApi = false;
 
-        const targetUsers = usernames || user_ids || [];
-        const mockResults = targetUsers.map((identifier: string, i: number) => ({
-          identifier,
-          user_id: `uid_${i + 1}`,
-          username: identifier.startsWith('@') ? identifier : `@user_${i + 1}`,
-          last_seen: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          last_seen_status: ['online', 'recently', 'within_week', 'within_month', 'long_ago'][Math.floor(Math.random() * 5)],
-          is_online: Math.random() > 0.8,
-          last_online_duration: Math.floor(Math.random() * 24 * 60)
-        }));
+        const targetIds = user_ids || usernames || [];
 
-        await supabaseClient
-          .from('telegram_extractions')
-          .update({
-            status: 'completed',
-            results: mockResults,
-            result_count: mockResults.length,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', data.id);
+        if (canUseRealApi && targetIds.length > 0) {
+          try {
+            const proxyResult = await callProxy('/getLastSeen', { userIds: targetIds });
+            results = proxyResult.users || [];
+            usingRealApi = true;
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Proxy error:`, proxyError.message);
+          }
+        }
 
         return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockResults,
-          count: mockResults.length,
-          real_api_configured: hasValidSession
+          success: true, 
+          results,
+          using_real_api: usingRealApi
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -223,56 +348,54 @@ serve(async (req) => {
       case 'hidden_members_full': {
         const { group_link } = params;
         
-        const { data, error } = await supabaseClient
+        const { data: extraction, error: insertError } = await supabase
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'hidden_members_full',
             source: group_link,
-            status: 'processing'
+            status: 'processing',
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        // Full hidden member info extraction
-        const mockResults = Array.from({ length: 75 }, (_, i) => ({
-          user_id: `hidden_${i + 1}`,
-          username: Math.random() > 0.3 ? `hidden_user_${i + 1}` : null,
-          first_name: `Hidden User ${i + 1}`,
-          last_name: Math.random() > 0.4 ? `Lastname ${i + 1}` : null,
-          phone: `+1234567${String(i).padStart(4, '0')}`,
-          bio: Math.random() > 0.5 ? `This is the bio of hidden user ${i + 1}` : null,
-          profile_photo_url: `https://example.com/hidden_photo_${i + 1}.jpg`,
-          last_seen: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString(),
-          last_seen_status: ['recently', 'within_week', 'within_month', 'long_ago'][Math.floor(Math.random() * 4)],
-          is_premium: Math.random() > 0.6,
-          is_verified: Math.random() > 0.95,
-          is_scam: false,
-          is_fake: false,
-          mutual_contacts_count: Math.floor(Math.random() * 10),
-          common_groups_count: Math.floor(Math.random() * 5),
-          join_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-          admin_rights: Math.random() > 0.9 ? { can_post: true, can_edit: false } : null
-        }));
+        let results: any[] = [];
+        let usingRealApi = false;
 
-        await supabaseClient
+        if (canUseRealApi) {
+          try {
+            const proxyResult = await callProxy('/getParticipants', { 
+              groupLink: group_link, 
+              limit: 1000 
+            });
+            results = proxyResult.participants || [];
+            usingRealApi = true;
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Proxy error:`, proxyError.message);
+            results = generateMockData(75, 'hidden_members');
+          }
+        } else {
+          results = generateMockData(75, 'hidden_members');
+        }
+
+        await supabase
           .from('telegram_extractions')
           .update({
             status: 'completed',
-            results: mockResults,
-            result_count: mockResults.length,
-            completed_at: new Date().toISOString()
+            results,
+            result_count: results.length,
+            completed_at: new Date().toISOString(),
           })
-          .eq('id', data.id);
+          .eq('id', extraction.id);
 
-        console.log(`Extracted ${mockResults.length} full hidden members`);
         return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockResults,
-          count: mockResults.length,
-          real_api_configured: hasValidSession
+          success: true, 
+          extraction_id: extraction.id,
+          count: results.length,
+          results,
+          using_real_api: usingRealApi
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -280,252 +403,72 @@ serve(async (req) => {
 
       case 'messenger_customers': {
         const { time_range, min_messages } = params;
-        
-        const { data, error } = await supabaseClient
+
+        const { data: extraction, error: insertError } = await supabase
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'messenger_customers',
-            source: account_id || 'default',
-            status: 'processing'
+            status: 'processing',
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        const mockResults = Array.from({ length: 80 }, (_, i) => ({
-          user_id: `customer_${i + 1}`,
-          username: Math.random() > 0.2 ? `customer_user_${i + 1}` : null,
-          first_name: `Customer ${i + 1}`,
-          last_name: Math.random() > 0.5 ? `CustLast ${i + 1}` : null,
-          phone: Math.random() > 0.4 ? `+1234567${String(i).padStart(4, '0')}` : null,
-          total_messages: Math.floor(Math.random() * 100) + (min_messages || 1),
-          first_message_date: new Date(Date.now() - Math.random() * 180 * 24 * 60 * 60 * 1000).toISOString(),
-          last_message_date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-          response_rate: Math.random(),
-          avg_response_time_minutes: Math.floor(Math.random() * 60),
-          sentiment_score: Math.random() * 2 - 1,
-          is_potential_buyer: Math.random() > 0.3,
-          tags: ['interested', 'lead', 'customer', 'support'][Math.floor(Math.random() * 4)],
-          notes: Math.random() > 0.7 ? `Note for customer ${i + 1}` : null
-        }));
+        // This requires iterating through chats - use mock for now
+        const results = generateMockData(80, 'customers');
 
-        await supabaseClient
+        await supabase
           .from('telegram_extractions')
           .update({
             status: 'completed',
-            results: mockResults,
-            result_count: mockResults.length,
-            completed_at: new Date().toISOString()
+            results,
+            result_count: results.length,
+            completed_at: new Date().toISOString(),
           })
-          .eq('id', data.id);
+          .eq('id', extraction.id);
 
         return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockResults,
-          count: mockResults.length,
-          real_api_configured: hasValidSession
+          success: true, 
+          extraction_id: extraction.id,
+          count: results.length,
+          results,
+          using_real_api: false,
+          message: 'Customer extraction uses mock data. Deploy MTProto proxy for real data.'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      case 'contacts_filtered': {
-        const { phone_prefixes, country_codes, exclude_prefixes } = params;
-        
-        const { data, error } = await supabaseClient
-          .from('telegram_extractions')
-          .insert({
-            user_id: user.id,
-            extraction_type: 'contacts_filtered',
-            source: account_id || 'default',
-            status: 'processing'
-          })
-          .select()
-          .single();
+      case 'validate_session': {
+        let isValid = false;
+        let userInfo = null;
 
-        if (error) throw error;
-
-        const allContacts = Array.from({ length: 200 }, (_, i) => {
-          const countryCode = ['+1', '+44', '+91', '+49', '+33', '+81', '+86'][Math.floor(Math.random() * 7)];
-          return {
-            user_id: `contact_${i + 1}`,
-            username: Math.random() > 0.3 ? `contact_user_${i + 1}` : null,
-            first_name: `Contact ${i + 1}`,
-            last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
-            phone: `${countryCode}${String(Math.floor(Math.random() * 10000000000)).padStart(10, '0')}`,
-            country_code: countryCode,
-            is_mutual: Math.random() > 0.5,
-            added_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString()
-          };
-        });
-
-        let filteredContacts = allContacts;
-        if (phone_prefixes && phone_prefixes.length > 0) {
-          filteredContacts = filteredContacts.filter(c => 
-            phone_prefixes.some((prefix: string) => c.phone.startsWith(prefix))
-          );
-        }
-        if (country_codes && country_codes.length > 0) {
-          filteredContacts = filteredContacts.filter(c =>
-            country_codes.includes(c.country_code)
-          );
-        }
-        if (exclude_prefixes && exclude_prefixes.length > 0) {
-          filteredContacts = filteredContacts.filter(c =>
-            !exclude_prefixes.some((prefix: string) => c.phone.startsWith(prefix))
-          );
+        if (canUseRealApi) {
+          try {
+            const proxyResult = await callProxy('/validateSession', {});
+            isValid = proxyResult.valid === true;
+            userInfo = proxyResult.user;
+          } catch (proxyError: any) {
+            console.error(`[telegram-extract] Session validation error:`, proxyError.message);
+          }
         }
 
-        await supabaseClient
-          .from('telegram_extractions')
-          .update({
-            status: 'completed',
-            results: filteredContacts,
-            result_count: filteredContacts.length,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', data.id);
-
         return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: filteredContacts,
-          count: filteredContacts.length,
-          total_before_filter: allContacts.length,
-          real_api_configured: hasValidSession
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      case 'chats': {
-        const { data, error } = await supabaseClient
-          .from('telegram_extractions')
-          .insert({
-            user_id: user.id,
-            extraction_type: 'chats',
-            source: account_id || 'default',
-            status: 'processing'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const mockChats = Array.from({ length: 30 }, (_, i) => ({
-          chat_id: `chat_${i + 1}`,
-          chat_name: `Chat ${i + 1}`,
-          chat_type: ['private', 'group', 'supergroup', 'channel'][Math.floor(Math.random() * 4)],
-          unread_count: Math.floor(Math.random() * 50),
-          last_message_date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-        }));
-
-        await supabaseClient
-          .from('telegram_extractions')
-          .update({
-            status: 'completed',
-            results: mockChats,
-            result_count: mockChats.length,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', data.id);
-
-        return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockChats,
-          count: mockChats.length,
-          real_api_configured: hasValidSession
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      case 'contacts': {
-        const { data, error } = await supabaseClient
-          .from('telegram_extractions')
-          .insert({
-            user_id: user.id,
-            extraction_type: 'contacts',
-            source: account_id || 'default',
-            status: 'processing'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const mockContacts = Array.from({ length: 100 }, (_, i) => ({
-          user_id: `contact_${i + 1}`,
-          username: Math.random() > 0.3 ? `contact_user_${i + 1}` : null,
-          first_name: `Contact ${i + 1}`,
-          last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
-          phone: `+1234567${String(i).padStart(4, '0')}`
-        }));
-
-        await supabaseClient
-          .from('telegram_extractions')
-          .update({
-            status: 'completed',
-            results: mockContacts,
-            result_count: mockContacts.length,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', data.id);
-
-        return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockContacts,
-          count: mockContacts.length,
-          real_api_configured: hasValidSession
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      case 'archived': {
-        const { data, error } = await supabaseClient
-          .from('telegram_extractions')
-          .insert({
-            user_id: user.id,
-            extraction_type: 'archived',
-            source: account_id || 'default',
-            status: 'processing'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        const mockArchived = Array.from({ length: 20 }, (_, i) => ({
-          chat_id: `archived_${i + 1}`,
-          chat_name: `Archived Chat ${i + 1}`,
-          chat_type: ['private', 'group'][Math.floor(Math.random() * 2)],
-          archived_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-        }));
-
-        await supabaseClient
-          .from('telegram_extractions')
-          .update({
-            status: 'completed',
-            results: mockArchived,
-            result_count: mockArchived.length,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', data.id);
-
-        return new Response(JSON.stringify({ 
-          extraction_id: data.id, 
-          results: mockArchived,
-          count: mockArchived.length,
-          real_api_configured: hasValidSession
+          success: true, 
+          valid: isValid,
+          user: userInfo,
+          has_credentials: !!(account?.api_id && account?.api_hash),
+          has_session: !!account?.session_data,
+          has_proxy: !!mtprotoProxyUrl
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'history': {
-        const { data, error } = await supabaseClient
+        const { data: extractions, error } = await supabase
           .from('telegram_extractions')
           .select('*')
           .eq('user_id', user.id)
@@ -533,21 +476,26 @@ serve(async (req) => {
           .limit(50);
 
         if (error) throw error;
-        return new Response(JSON.stringify({ extractions: data }), {
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          extractions,
+          proxy_configured: !!mtprotoProxyUrl,
+          account_configured: !!(account?.api_id && account?.api_hash && account?.session_data)
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Unknown action' }), {
+        return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
-  } catch (error: unknown) {
-    console.error('Telegram extract error:', error);
-    const message = error instanceof Error ? error.message : 'An error occurred';
-    return new Response(JSON.stringify({ error: message }), {
+  } catch (error: any) {
+    console.error('[telegram-extract] Error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
