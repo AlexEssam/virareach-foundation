@@ -110,13 +110,33 @@ serve(async (req) => {
       }
     }
 
+    // Helper function to validate session string
+    // A valid GramJS session string is a long base64-encoded string (200+ characters)
+    // It should NOT be JSON metadata like {"verified":true,"loginMethod":"qr"}
+    function isValidSessionString(sessionData: any): boolean {
+      if (!sessionData || typeof sessionData !== 'string') return false;
+      // Check it's not JSON
+      if (sessionData.trim().startsWith('{')) return false;
+      // Valid session strings are typically 200+ characters
+      if (sessionData.length < 100) return false;
+      // Should be mostly alphanumeric/base64
+      const base64Pattern = /^[A-Za-z0-9+/=]+$/;
+      return base64Pattern.test(sessionData.trim());
+    }
+
+    const hasValidSession = isValidSessionString(account?.session_data);
+    
     // Check if we can use real API (now using resolved apiId/apiHash)
     const canUseRealApi = mtprotoProxyUrl && 
       apiId && 
       apiHash && 
-      account?.session_data;
+      hasValidSession;
 
-    console.log(`[telegram-extract] Can use real API: ${canUseRealApi}, Proxy: ${mtprotoProxyUrl ? 'configured' : 'not configured'}, Account: ${account?.phone_number || 'none'}, API ID: ${apiId ? 'set' : 'missing'}`);
+    console.log(`[telegram-extract] Can use real API: ${canUseRealApi}, Proxy: ${mtprotoProxyUrl ? 'configured' : 'not configured'}, Account: ${account?.phone_number || 'none'}, API ID: ${apiId ? 'set' : 'missing'}, Valid Session: ${hasValidSession}`);
+    
+    if (account?.session_data && !hasValidSession) {
+      console.log(`[telegram-extract] Session data exists but is invalid (likely metadata, not a real session string). Length: ${account.session_data?.length}, Starts with '{': ${account.session_data?.trim()?.startsWith('{')}`);
+    }
 
     // Helper function to call MTProto proxy (uses resolved apiId/apiHash)
     async function callProxy(endpoint: string, body: any): Promise<any> {
@@ -466,6 +486,7 @@ serve(async (req) => {
       case 'validate_session': {
         let isValid = false;
         let userInfo = null;
+        const sessionValid = isValidSessionString(account?.session_data);
 
         if (canUseRealApi) {
           try {
@@ -481,8 +502,12 @@ serve(async (req) => {
           success: true, 
           valid: isValid,
           user: userInfo,
-          has_credentials: !!(account?.api_id && account?.api_hash),
+          has_credentials: !!(apiId && apiHash),
           has_session: !!account?.session_data,
+          session_valid: sessionValid,
+          session_issue: account?.session_data && !sessionValid 
+            ? 'Session data is metadata, not a valid GramJS session string. Generate a real session using the Python script.'
+            : null,
           has_proxy: !!mtprotoProxyUrl
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
