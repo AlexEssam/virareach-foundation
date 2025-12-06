@@ -12,9 +12,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Smartphone, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download
+  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download, Pencil
 } from "lucide-react";
 
 interface TelegramAccount {
@@ -70,6 +71,14 @@ export default function TelegramAccountManager() {
   const [maxDailyGroups, setMaxDailyGroups] = useState("10");
   const [cooldownMinutes, setCooldownMinutes] = useState("30");
   const [autoSwitchOnLimit, setAutoSwitchOnLimit] = useState(true);
+
+  // Edit account dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<TelegramAccount | null>(null);
+  const [editApiId, setEditApiId] = useState("");
+  const [editApiHash, setEditApiHash] = useState("");
+  const [editSessionString, setEditSessionString] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -218,6 +227,42 @@ export default function TelegramAccountManager() {
     }
   };
 
+  const openEditDialog = (account: TelegramAccount) => {
+    setEditingAccount(account);
+    setEditApiId(account.api_id || "");
+    setEditApiHash(account.api_hash || "");
+    setEditSessionString((account as any).session_data || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveApiCredentials = async () => {
+    if (!editingAccount) return;
+
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('telegram_accounts')
+        .update({
+          api_id: editApiId || null,
+          api_hash: editApiHash || null,
+          session_data: editSessionString || null
+        })
+        .eq('id', editingAccount.id);
+
+      if (error) throw error;
+
+      toast({ title: "API Credentials Updated", description: "Account credentials saved successfully" });
+      setEditDialogOpen(false);
+      setEditingAccount(null);
+      fetchAccounts();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -310,6 +355,14 @@ export default function TelegramAccountManager() {
                               <p className="font-medium">{account.groups_joined_today || 0}</p>
                             </div>
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(account)}
+                                title="Edit API Credentials"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
                               <Switch
                                 checked={account.status === 'active'}
                                 onCheckedChange={() => handleToggleStatus(account.id, account.status)}
@@ -690,6 +743,72 @@ with TelegramClient(StringSession(), api_id, api_hash) as c:
           </Tabs>
         </div>
       </main>
+
+      {/* Edit API Credentials Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              Edit API Credentials
+            </DialogTitle>
+            <DialogDescription>
+              Update API credentials for {editingAccount?.account_name || editingAccount?.phone_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>API ID</Label>
+              <Input
+                placeholder="12345678"
+                value={editApiId}
+                onChange={(e) => setEditApiId(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>API Hash</Label>
+              <Input
+                type="password"
+                placeholder="0123456789abcdef0123456789abcdef"
+                value={editApiHash}
+                onChange={(e) => setEditApiHash(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Session String</Label>
+              <textarea
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Paste your Telegram session string here..."
+                value={editSessionString}
+                onChange={(e) => setEditSessionString(e.target.value)}
+              />
+            </div>
+            <div className="p-3 bg-muted/50 rounded-lg text-xs">
+              <p className="font-medium mb-1">Need credentials?</p>
+              <a 
+                href="https://my.telegram.org/apps" 
+                target="_blank" 
+                rel="noopener" 
+                className="text-primary underline flex items-center gap-1"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Get API ID & Hash from my.telegram.org
+              </a>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveApiCredentials} disabled={editSaving}>
+              {editSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Credentials
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
