@@ -172,37 +172,48 @@ export default function AIAudioModule() {
       audioRef.current = null;
     }
 
+    if (!hasApiKey) {
+      toast.error("Please configure your ElevenLabs API key first to preview voices");
+      return;
+    }
+
     setLoadingVoice(voiceId);
     setPlayingVoice(null);
 
     try {
-      const sampleUrl = `https://api.elevenlabs.io/v1/voices/${voiceId}/preview`;
-      
-      const audio = new Audio(sampleUrl);
-      audioRef.current = audio;
+      // Call edge function to get authenticated preview
+      const { data, error } = await supabase.functions.invoke('ai-audio', {
+        body: { action: 'voice_preview', voice_id: voiceId }
+      });
 
-      audio.oncanplaythrough = () => {
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      if (data.audio_base64) {
+        const audio = new Audio(`data:audio/mpeg;base64,${data.audio_base64}`);
+        audioRef.current = audio;
+
+        audio.onended = () => {
+          setPlayingVoice(null);
+          audioRef.current = null;
+        };
+
+        audio.onerror = () => {
+          setLoadingVoice(null);
+          setPlayingVoice(null);
+          toast.error(`Failed to play preview for ${voiceName}`);
+        };
+
         setLoadingVoice(null);
         setPlayingVoice(voiceId);
         audio.play();
-      };
-
-      audio.onended = () => {
-        setPlayingVoice(null);
-        audioRef.current = null;
-      };
-
-      audio.onerror = () => {
-        setLoadingVoice(null);
-        setPlayingVoice(null);
-        toast.error(`Preview for ${voiceName} unavailable.`);
-      };
-
-      audio.load();
-    } catch (error) {
+      } else {
+        throw new Error("No audio data received");
+      }
+    } catch (error: any) {
       setLoadingVoice(null);
       setPlayingVoice(null);
-      toast.error("Failed to load voice preview");
+      toast.error(error.message || "Failed to load voice preview");
     }
   };
 

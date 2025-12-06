@@ -402,6 +402,69 @@ serve(async (req) => {
         );
       }
 
+      case "voice_preview": {
+        const { voice_id } = params;
+        
+        if (!voice_id) {
+          return new Response(
+            JSON.stringify({ error: "Voice ID is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const apiKey = await getUserApiKey();
+        if (!apiKey) {
+          return new Response(
+            JSON.stringify({ error: "ElevenLabs API key not configured. Please add your API key in settings." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch voice details from ElevenLabs to get preview_url
+        const voiceResponse = await fetch(`https://api.elevenlabs.io/v1/voices/${voice_id}`, {
+          headers: { "xi-api-key": apiKey }
+        });
+
+        if (!voiceResponse.ok) {
+          console.error("ElevenLabs voice fetch error:", voiceResponse.status);
+          return new Response(
+            JSON.stringify({ error: `Failed to fetch voice: ${voiceResponse.status}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const voiceData = await voiceResponse.json();
+        const previewUrl = voiceData.preview_url;
+
+        if (!previewUrl) {
+          return new Response(
+            JSON.stringify({ error: "No preview available for this voice" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fetch the actual audio from preview_url
+        const audioResponse = await fetch(previewUrl);
+        if (!audioResponse.ok) {
+          return new Response(
+            JSON.stringify({ error: "Failed to fetch audio preview" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const audioBuffer = await audioResponse.arrayBuffer();
+        const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            audio_base64: audioBase64,
+            content_type: "audio/mpeg"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       case "audio_clean": {
         // Audio cleaning guidance using Lovable AI
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
