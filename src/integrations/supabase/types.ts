@@ -3355,6 +3355,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          wa_session_id: string | null
         }
         Insert: {
           account_name?: string | null
@@ -3371,6 +3372,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          wa_session_id?: string | null
         }
         Update: {
           account_name?: string | null
@@ -3387,6 +3389,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          wa_session_id?: string | null
         }
         Relationships: [
           {

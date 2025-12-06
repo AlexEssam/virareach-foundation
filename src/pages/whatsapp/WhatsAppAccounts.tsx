@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Plus, Smartphone, Trash2, Loader2, RefreshCw, 
   Settings, CheckCircle, XCircle, Wifi, Shield, RotateCcw,
-  ExternalLink, Download, Save, Copy
+  QrCode, AlertCircle
 } from "lucide-react";
 
 interface WhatsAppAccount {
@@ -28,6 +28,7 @@ interface WhatsAppAccount {
   proxy_host: string | null;
   proxy_port: number | null;
   proxy_username: string | null;
+  wa_session_id: string | null;
   created_at: string;
 }
 
@@ -37,6 +38,8 @@ interface RotationSettings {
   switchAfter: number;
   cooldownMinutes: number;
 }
+
+type ConnectionState = "idle" | "generating" | "qr_ready" | "scanning" | "connected" | "failed";
 
 const rotationModes = [
   { value: "sequential", label: "Sequential", description: "Use accounts in order" },
@@ -50,17 +53,25 @@ export default function WhatsAppAccounts() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accounts, setAccounts] = useState<WhatsAppAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   
-  // Form state
-  const [phoneNumber, setPhoneNumber] = useState("");
+  // QR code connection state
+  const [connectionState, setConnectionState] = useState<ConnectionState>("idle");
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
+  const [connectedName, setConnectedName] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [accountName, setAccountName] = useState("");
-  const [proxyHost, setProxyHost] = useState("");
-  const [proxyPort, setProxyPort] = useState("");
-  const [proxyUsername, setProxyUsername] = useState("");
-  const [proxyPassword, setProxyPassword] = useState("");
+  
+  // Polling ref
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingCountRef = useRef(0);
+  
+  // Reconnection state
+  const [reconnectingAccountId, setReconnectingAccountId] = useState<string | null>(null);
+  const [reconnectDialogOpen, setReconnectDialogOpen] = useState(false);
   
   // Rotation settings
   const [rotationSettings, setRotationSettings] = useState<RotationSettings>({
@@ -101,97 +112,214 @@ export default function WhatsAppAccounts() {
     }
   }, [user]);
 
-  const handleAddAccount = async () => {
-    if (!phoneNumber.trim()) {
-      toast({ title: "Error", description: "Please enter phone number", variant: "destructive" });
-      return;
-    }
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, []);
 
-    setAdding(true);
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    pollingCountRef.current = 0;
+  }, []);
+
+  const resetConnectionState = useCallback(() => {
+    stopPolling();
+    setConnectionState("idle");
+    setQrCode(null);
+    setSessionId(null);
+    setConnectedPhone(null);
+    setConnectedName(null);
+    setConnectionError(null);
+    setAccountName("");
+    setReconnectingAccountId(null);
+  }, [stopPolling]);
+
+  const generateQRCode = async () => {
+    setConnectionState("generating");
+    setConnectionError(null);
+    setQrCode(null);
+    
     try {
-      const { error } = await supabase
-        .from("whatsapp_accounts")
-        .insert({
-          user_id: user!.id,
-          phone_number: phoneNumber.trim(),
-          account_name: accountName.trim() || null,
-          proxy_host: proxyHost.trim() || null,
-          proxy_port: proxyPort ? parseInt(proxyPort) : null,
-          proxy_username: proxyUsername.trim() || null,
-          proxy_password: proxyPassword.trim() || null,
-          status: "pending",
+      const { data, error } = await supabase.functions.invoke("whatsapp-accounts", {
+        body: { action: "generate_qr" }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setQrCode(data.qrCode);
+      setSessionId(data.sessionId);
+      setConnectionState("qr_ready");
+      
+      // Start polling for status
+      startStatusPolling(data.sessionId);
+    } catch (error: any) {
+      console.error("Error generating QR:", error);
+      setConnectionError(error.message || "Failed to generate QR code");
+      setConnectionState("failed");
+    }
+  };
+
+  const startStatusPolling = (sid: string) => {
+    stopPolling();
+    pollingCountRef.current = 0;
+    
+    pollingRef.current = setInterval(async () => {
+      pollingCountRef.current++;
+      
+      // Stop after 60 seconds (30 polls at 2s interval)
+      if (pollingCountRef.current > 30) {
+        stopPolling();
+        setConnectionError("QR code expired. Click 'Refresh QR' to try again.");
+        setConnectionState("failed");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke("whatsapp-accounts", {
+          body: { action: "check_status", sessionId: sid }
         });
+
+        if (error) throw error;
+
+        if (data.state === "connected") {
+          stopPolling();
+          setConnectedPhone(data.phoneNumber);
+          setConnectedName(data.pushName);
+          setConnectionState("connected");
+        } else if (data.state === "scanning") {
+          setConnectionState("scanning");
+        } else if (data.state === "failed") {
+          stopPolling();
+          setConnectionError(data.error || "Connection failed");
+          setConnectionState("failed");
+        }
+      } catch (error: any) {
+        console.error("Polling error:", error);
+      }
+    }, 2000);
+  };
+
+  const saveConnectedAccount = async () => {
+    if (!sessionId || !connectedPhone) return;
+
+    try {
+      if (reconnectingAccountId) {
+        // Update existing account
+        const { error } = await supabase.functions.invoke("whatsapp-accounts", {
+          body: { 
+            action: "update_status", 
+            accountId: reconnectingAccountId,
+            status: "connected",
+            sessionId: sessionId
+          }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Reconnected!",
+          description: `${connectedName || connectedPhone} is now connected`,
+        });
+      } else {
+        // Save new account
+        const { data, error } = await supabase.functions.invoke("whatsapp-accounts", {
+          body: { 
+            action: "save_session", 
+            sessionId: sessionId,
+            phoneNumber: connectedPhone,
+            accountName: accountName.trim() || connectedName || connectedPhone
+          }
+        });
+
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        toast({
+          title: "Account Added!",
+          description: `${connectedName || connectedPhone} connected successfully`,
+        });
+      }
+
+      resetConnectionState();
+      setAddDialogOpen(false);
+      setReconnectDialogOpen(false);
+      fetchAccounts();
+    } catch (error: any) {
+      console.error("Error saving account:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save account",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReconnect = async (account: WhatsAppAccount) => {
+    setReconnectingAccountId(account.id);
+    setReconnectDialogOpen(true);
+    
+    // Generate QR for reconnection
+    setConnectionState("generating");
+    setConnectionError(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-accounts", {
+        body: { action: "reconnect", accountId: account.id }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setQrCode(data.qrCode);
+      setSessionId(data.sessionId);
+      setConnectionState("qr_ready");
+      
+      startStatusPolling(data.sessionId);
+    } catch (error: any) {
+      console.error("Error reconnecting:", error);
+      setConnectionError(error.message || "Failed to start reconnection");
+      setConnectionState("failed");
+    }
+  };
+
+  const handleDisconnect = async (accountId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("whatsapp-accounts", {
+        body: { action: "disconnect", accountId }
+      });
 
       if (error) throw error;
 
       toast({
-        title: "Account Added",
-        description: "Now scan QR code to connect",
+        title: "Disconnected",
+        description: "Account has been disconnected",
       });
       
-      resetForm();
-      setAddDialogOpen(false);
       fetchAccounts();
     } catch (error: any) {
-      console.error("Error adding account:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add account",
+        description: error.message || "Failed to disconnect",
         variant: "destructive",
       });
-    } finally {
-      setAdding(false);
     }
-  };
-
-  const resetForm = () => {
-    setPhoneNumber("");
-    setAccountName("");
-    setProxyHost("");
-    setProxyPort("");
-    setProxyUsername("");
-    setProxyPassword("");
-  };
-
-  const handleOpenWhatsAppWeb = () => {
-    window.open('https://web.whatsapp.com/', '_blank');
-    toast({ 
-      title: "WhatsApp Web Opened", 
-      description: "Link your device in WhatsApp Web, then save your account here" 
-    });
-  };
-
-  const handleOpenWhatsAppDownload = () => {
-    window.open('https://www.whatsapp.com/download', '_blank');
-    toast({ 
-      title: "WhatsApp Download Page Opened", 
-      description: "Download WhatsApp for your device" 
-    });
-  };
-
-  const handleCopyLink = (url: string, name: string) => {
-    navigator.clipboard.writeText(url);
-    toast({ title: "Link Copied!", description: `${name} URL copied to clipboard` });
-  };
-
-  const handleReconnect = async (account: WhatsAppAccount) => {
-    window.open('https://web.whatsapp.com/', '_blank');
-    toast({ 
-      title: "WhatsApp Web Opened", 
-      description: `Reconnect ${account.account_name || account.phone_number} via WhatsApp Web` 
-    });
-    
-    // Update account status to active
-    await supabase
-      .from("whatsapp_accounts")
-      .update({ status: "active" })
-      .eq("id", account.id);
-    
-    fetchAccounts();
   };
 
   const handleDeleteAccount = async (accountId: string) => {
     try {
+      // Disconnect first if connected
+      await supabase.functions.invoke("whatsapp-accounts", {
+        body: { action: "disconnect", accountId }
+      });
+
       const { error } = await supabase
         .from("whatsapp_accounts")
         .delete()
@@ -215,31 +343,7 @@ export default function WhatsAppAccounts() {
     }
   };
 
-  const handleDisconnect = async (accountId: string) => {
-    try {
-      const { error } = await supabase
-        .from("whatsapp_accounts")
-        .update({ status: "disconnected", session_data: null })
-        .eq("id", accountId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Disconnected",
-        description: "Account has been disconnected",
-      });
-      
-      fetchAccounts();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to disconnect",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const activeAccounts = accounts.filter(a => a.status === "active");
+  const activeAccounts = accounts.filter(a => a.status === "connected" || a.status === "active");
   const totalMessagesSent = accounts.reduce((acc, a) => acc + (a.messages_sent_today || 0), 0);
 
   if (authLoading || loading) {
@@ -249,6 +353,145 @@ export default function WhatsAppAccounts() {
       </div>
     );
   }
+
+  // QR Code Dialog Content Component
+  const QRCodeDialogContent = () => (
+    <div className="py-4 space-y-6">
+      {connectionState === "idle" && (
+        <div className="flex flex-col items-center">
+          <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
+            <QrCode className="h-10 w-10 text-[#25D366]" />
+          </div>
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Generate a QR code to connect your WhatsApp account. You'll need to scan it with WhatsApp on your phone.
+          </p>
+          <Button 
+            className="bg-[#25D366] hover:bg-[#25D366]/90"
+            onClick={generateQRCode}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            Generate QR Code
+          </Button>
+        </div>
+      )}
+
+      {connectionState === "generating" && (
+        <div className="flex flex-col items-center py-8">
+          <Loader2 className="h-12 w-12 text-[#25D366] animate-spin mb-4" />
+          <p className="text-sm text-muted-foreground">Generating QR code...</p>
+        </div>
+      )}
+
+      {(connectionState === "qr_ready" || connectionState === "scanning") && qrCode && (
+        <div className="flex flex-col items-center">
+          <div className="relative">
+            <img 
+              src={qrCode} 
+              alt="WhatsApp QR Code" 
+              className="w-64 h-64 rounded-lg border border-border"
+            />
+            {connectionState === "scanning" && (
+              <div className="absolute inset-0 bg-background/80 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 text-[#25D366] animate-spin mx-auto mb-2" />
+                  <p className="text-sm font-medium">Authenticating...</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 text-center">
+            <p className="text-sm font-medium mb-1">
+              {connectionState === "scanning" ? "QR Code Scanned!" : "Scan with WhatsApp"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {connectionState === "scanning" 
+                ? "Please wait while we connect..." 
+                : "Open WhatsApp → Settings → Linked Devices → Link a Device"}
+            </p>
+          </div>
+
+          {connectionState === "qr_ready" && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4"
+              onClick={generateQRCode}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh QR
+            </Button>
+          )}
+        </div>
+      )}
+
+      {connectionState === "connected" && (
+        <div className="flex flex-col items-center">
+          <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
+            <CheckCircle className="h-10 w-10 text-[#25D366]" />
+          </div>
+          <h3 className="text-lg font-medium mb-1">Connected!</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {connectedName && `${connectedName} • `}{connectedPhone}
+          </p>
+          
+          {!reconnectingAccountId && (
+            <div className="w-full space-y-3 mb-4">
+              <div className="space-y-2">
+                <Label htmlFor="accountName">Account Name (Optional)</Label>
+                <Input
+                  id="accountName"
+                  placeholder={connectedName || "e.g., Business Account"}
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          
+          <Button 
+            className="w-full bg-[#25D366] hover:bg-[#25D366]/90"
+            onClick={saveConnectedAccount}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {reconnectingAccountId ? "Confirm Reconnection" : "Save Account"}
+          </Button>
+        </div>
+      )}
+
+      {connectionState === "failed" && (
+        <div className="flex flex-col items-center">
+          <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-4">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+          </div>
+          <h3 className="text-lg font-medium mb-1">Connection Failed</h3>
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            {connectionError || "Unable to connect. Please try again."}
+          </p>
+          <Button 
+            className="bg-[#25D366] hover:bg-[#25D366]/90"
+            onClick={generateQRCode}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Instructions */}
+      {(connectionState === "idle" || connectionState === "qr_ready") && (
+        <div className="bg-secondary/50 rounded-lg p-4">
+          <p className="text-sm font-medium mb-2">How to connect:</p>
+          <ol className="text-xs text-muted-foreground space-y-1">
+            <li>1. Open WhatsApp on your phone</li>
+            <li>2. Go to Settings → Linked Devices</li>
+            <li>3. Tap "Link a Device"</li>
+            <li>4. Scan the QR code above</li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -276,9 +519,7 @@ export default function WhatsAppAccounts() {
               </Button>
               <Dialog open={addDialogOpen} onOpenChange={(open) => {
                 setAddDialogOpen(open);
-                if (!open) {
-                  resetForm();
-                }
+                if (!open) resetConnectionState();
               }}>
                 <DialogTrigger asChild>
                   <Button variant="hero">
@@ -289,137 +530,14 @@ export default function WhatsAppAccounts() {
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-[#25D366]" />
-                      Link WhatsApp Account
+                      <QrCode className="h-5 w-5 text-[#25D366]" />
+                      Connect WhatsApp Account
                     </DialogTitle>
                     <DialogDescription>
-                      Open WhatsApp Web to link your device, then save your account here
+                      Scan the QR code with WhatsApp to link your account
                     </DialogDescription>
                   </DialogHeader>
-                  
-                  <div className="py-4 space-y-6">
-                    {/* WhatsApp Logo and Instructions */}
-                    <div className="flex flex-col items-center">
-                      <div className="w-20 h-20 rounded-full bg-[#25D366]/20 flex items-center justify-center mb-4">
-                        <Smartphone className="h-10 w-10 text-[#25D366]" />
-                      </div>
-                      <p className="text-sm text-muted-foreground text-center mb-4">
-                        Click below to open WhatsApp Web in a new tab. Link your device there, then return here to save your account.
-                      </p>
-                      
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 w-full">
-                        <Button 
-                          className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90"
-                          onClick={handleOpenWhatsAppWeb}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Open WhatsApp Web
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleCopyLink('https://web.whatsapp.com/', 'WhatsApp Web')}
-                          title="Copy Link"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={handleOpenWhatsAppDownload}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Instructions */}
-                    <div className="bg-secondary/50 rounded-lg p-4">
-                      <p className="text-sm font-medium mb-2">How to link:</p>
-                      <ol className="text-xs text-muted-foreground space-y-1">
-                        <li>1. Open WhatsApp Web in the new tab</li>
-                        <li>2. On your phone, open WhatsApp → Settings → Linked Devices</li>
-                        <li>3. Tap "Link a Device" and scan the QR code</li>
-                        <li>4. Return here and enter your phone number below</li>
-                      </ol>
-                    </div>
-
-                    {/* Account Details Form */}
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phoneNumber">Phone Number *</Label>
-                        <Input
-                          id="phoneNumber"
-                          placeholder="+1234567890"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="accountName">Account Name (Optional)</Label>
-                        <Input
-                          id="accountName"
-                          placeholder="e.g., Business Account"
-                          value={accountName}
-                          onChange={(e) => setAccountName(e.target.value)}
-                        />
-                      </div>
-                      
-                      <Button 
-                        className="w-full bg-[#25D366] hover:bg-[#25D366]/90"
-                        onClick={async () => {
-                          if (!phoneNumber.trim()) {
-                            toast({ 
-                              title: "Error", 
-                              description: "Please enter your phone number", 
-                              variant: "destructive" 
-                            });
-                            return;
-                          }
-                          
-                          setAdding(true);
-                          try {
-                            const { error } = await supabase
-                              .from("whatsapp_accounts")
-                              .insert({
-                                user_id: user!.id,
-                                phone_number: phoneNumber.trim(),
-                                account_name: accountName.trim() || null,
-                                status: "active",
-                              });
-
-                            if (error) throw error;
-
-                            toast({
-                              title: "Account Added!",
-                              description: "WhatsApp account saved successfully",
-                            });
-                            
-                            setAddDialogOpen(false);
-                            resetForm();
-                            fetchAccounts();
-                          } catch (error: any) {
-                            toast({
-                              title: "Error",
-                              description: error.message || "Failed to save account",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setAdding(false);
-                          }
-                        }}
-                        disabled={adding}
-                      >
-                        {adding ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Save Account
-                      </Button>
-                    </div>
-                  </div>
+                  <QRCodeDialogContent />
                 </DialogContent>
               </Dialog>
             </div>
@@ -445,7 +563,7 @@ export default function WhatsAppAccounts() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{activeAccounts.length}</p>
-                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-sm text-muted-foreground">Connected</p>
                 </div>
               </CardContent>
             </Card>
@@ -525,12 +643,14 @@ export default function WhatsAppAccounts() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-xl border ${
-                          account.status === "active" 
+                          account.status === "connected" || account.status === "active"
                             ? "bg-[#25D366]/10 border-[#25D366]/20" 
                             : "bg-secondary/50 border-border"
                         }`}>
                           <Smartphone className={`h-6 w-6 ${
-                            account.status === "active" ? "text-[#25D366]" : "text-muted-foreground"
+                            account.status === "connected" || account.status === "active"
+                              ? "text-[#25D366]" 
+                              : "text-muted-foreground"
                           }`} />
                         </div>
                         <div>
@@ -540,7 +660,7 @@ export default function WhatsAppAccounts() {
                             </h3>
                             <Badge 
                               className={
-                                account.status === "active" 
+                                account.status === "connected" || account.status === "active"
                                   ? "bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/30" 
                                   : account.status === "pending"
                                   ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30"
@@ -567,16 +687,7 @@ export default function WhatsAppAccounts() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {account.status === "pending" ? (
-                          <Button 
-                            variant="glow" 
-                            size="sm"
-                            onClick={() => handleReconnect(account)}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Connect
-                          </Button>
-                        ) : account.status === "active" ? (
+                        {account.status === "connected" || account.status === "active" ? (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -591,8 +702,8 @@ export default function WhatsAppAccounts() {
                             size="sm"
                             onClick={() => handleReconnect(account)}
                           >
-                            <RefreshCw className="h-4 w-4 mr-1" />
-                            Reconnect
+                            <QrCode className="h-4 w-4 mr-1" />
+                            {account.status === "pending" ? "Connect" : "Reconnect"}
                           </Button>
                         )}
                         <Button 
@@ -611,6 +722,24 @@ export default function WhatsAppAccounts() {
             </div>
           )}
 
+          {/* Reconnect Dialog */}
+          <Dialog open={reconnectDialogOpen} onOpenChange={(open) => {
+            setReconnectDialogOpen(open);
+            if (!open) resetConnectionState();
+          }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-[#25D366]" />
+                  Reconnect WhatsApp Account
+                </DialogTitle>
+                <DialogDescription>
+                  Scan the QR code with WhatsApp to reconnect
+                </DialogDescription>
+              </DialogHeader>
+              <QRCodeDialogContent />
+            </DialogContent>
+          </Dialog>
 
           {/* Rotation Settings Dialog */}
           <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
@@ -720,13 +849,6 @@ export default function WhatsAppAccounts() {
           </Dialog>
         </div>
       </main>
-
-      <style>{`
-        @keyframes progress {
-          from { width: 0%; }
-          to { width: 100%; }
-        }
-      `}</style>
     </div>
   );
 }
