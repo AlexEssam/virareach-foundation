@@ -73,6 +73,36 @@ export type Database = {
           },
         ]
       }
+      custom_voices: {
+        Row: {
+          created_at: string
+          description: string | null
+          elevenlabs_voice_id: string
+          id: string
+          name: string
+          sample_file_name: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          elevenlabs_voice_id: string
+          id?: string
+          name: string
+          sample_file_name?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          elevenlabs_voice_id?: string
+          id?: string
+          name?: string
+          sample_file_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_campaigns: {
         Row: {
           anti_spam_settings: Json | null
@@ -1769,6 +1799,7 @@ export type Database = {
         Row: {
           created_at: string
           device_fingerprint: string | null
+          elevenlabs_api_key: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -1779,6 +1810,7 @@ export type Database = {
         Insert: {
           created_at?: string
           device_fingerprint?: string | null
+          elevenlabs_api_key?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -1789,6 +1821,7 @@ export type Database = {
         Update: {
           created_at?: string
           device_fingerprint?: string | null
+          elevenlabs_api_key?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
