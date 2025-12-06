@@ -6,6 +6,46 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to get last seen status string
+function getLastSeenStatus(lastSeenTs?: number): string {
+  if (!lastSeenTs) return 'unknown';
+  const now = Date.now() / 1000;
+  const diff = now - lastSeenTs;
+  if (diff < 60) return 'online';
+  if (diff < 3600) return 'recently';
+  if (diff < 604800) return 'within_week';
+  if (diff < 2592000) return 'within_month';
+  return 'long_ago';
+}
+
+// Helper to generate mock data as fallback
+function generateMockData(count: number, includeHidden: boolean) {
+  return Array.from({ length: count }, (_, i) => ({
+    user_id: `user_${i + 1}`,
+    username: Math.random() > 0.2 ? `telegram_user_${i + 1}` : null,
+    first_name: `User ${i + 1}`,
+    last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
+    phone: includeHidden ? `+1234567${String(i).padStart(4, '0')}` : null,
+    is_bot: false,
+    is_premium: Math.random() > 0.7,
+    last_seen: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+    last_seen_status: ['recently', 'within_week', 'within_month', 'long_ago', 'online'][Math.floor(Math.random() * 5)],
+    bio: includeHidden && Math.random() > 0.5 ? `Bio of user ${i + 1}` : null,
+    profile_photo: includeHidden ? `https://example.com/photo_${i + 1}.jpg` : null,
+    restriction_reason: null,
+    verified: Math.random() > 0.9
+  }));
+}
+
+// MTProto helper - sends request to Telegram API via session
+async function mtprotoRequest(sessionString: string, apiId: string, apiHash: string, method: string, params: any) {
+  // Note: Real MTProto requires complex encryption. 
+  // For production, you'd use a Telegram Bot API or a dedicated MTProto service.
+  // This is a placeholder that would connect to a real MTProto proxy service.
+  console.log(`MTProto request: ${method}`, params);
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -26,8 +66,44 @@ serve(async (req) => {
       });
     }
 
-    const { action, ...params } = await req.json();
+    const { action, account_id, ...params } = await req.json();
     console.log(`Telegram extract action: ${action}`, params);
+
+    // Get account with API credentials if account_id provided
+    let account: any = null;
+    if (account_id) {
+      const { data } = await supabaseClient
+        .from('telegram_accounts')
+        .select('*')
+        .eq('id', account_id)
+        .eq('user_id', user.id)
+        .single();
+      account = data;
+    } else {
+      // Get first active account with session data
+      const { data } = await supabaseClient
+        .from('telegram_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .not('session_data', 'is', null)
+        .not('api_id', 'is', null)
+        .limit(1)
+        .single();
+      account = data;
+    }
+
+    const hasValidSession = account?.session_data && account?.api_id && account?.api_hash;
+    console.log(`Account found: ${!!account}, Has valid session: ${hasValidSession}`);
+
+    // For real Telegram API integration, you would need:
+    // 1. A running MTProto client (like gramjs) on a server
+    // 2. Or use Telegram Bot API (limited functionality)
+    // 3. Or connect to a Telegram API proxy service
+    // 
+    // Since Edge Functions can't maintain persistent connections or run MTProto directly,
+    // the real implementation would call an external service that handles MTProto.
+    // For now, we'll use mock data but mark when real API would be used.
 
     switch (action) {
       case 'group_members': {
@@ -66,25 +142,12 @@ serve(async (req) => {
 
         if (error) throw error;
 
-        // Determine how many members to extract (default 500, max 5000 for demo)
         const extractLimit = limit === 'all' ? 1500 : Math.min(parseInt(limit) || 500, 5000);
         
-        // Simulate extraction with mock data
-        const mockResults = Array.from({ length: extractLimit }, (_, i) => ({
-          user_id: `user_${i + 1}`,
-          username: Math.random() > 0.2 ? `telegram_user_${i + 1}` : null,
-          first_name: `User ${i + 1}`,
-          last_name: Math.random() > 0.5 ? `Lastname ${i + 1}` : null,
-          phone: include_hidden ? `+1234567${String(i).padStart(4, '0')}` : null,
-          is_bot: false,
-          is_premium: Math.random() > 0.7,
-          last_seen: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-          last_seen_status: ['recently', 'within_week', 'within_month', 'long_ago', 'online'][Math.floor(Math.random() * 5)],
-          bio: include_hidden && Math.random() > 0.5 ? `Bio of user ${i + 1}` : null,
-          profile_photo: include_hidden ? `https://example.com/photo_${i + 1}.jpg` : null,
-          restriction_reason: null,
-          verified: Math.random() > 0.9
-        }));
+        // Generate data - in production this would come from real Telegram API
+        // Mark as "would use real API" if credentials exist
+        const mockResults = generateMockData(extractLimit, include_hidden);
+        const wouldUseRealApi = hasValidSession;
 
         await supabaseClient
           .from('telegram_extractions')
@@ -96,11 +159,15 @@ serve(async (req) => {
           })
           .eq('id', data.id);
 
-        console.log(`Extracted ${mockResults.length} group members from ${normalizedGroupLink}`);
+        console.log(`Extracted ${mockResults.length} group members (real API configured: ${wouldUseRealApi})`);
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockResults,
-          count: mockResults.length 
+          count: mockResults.length,
+          real_api_configured: wouldUseRealApi,
+          note: wouldUseRealApi 
+            ? 'API credentials configured. For real extraction, connect to MTProto service.' 
+            : 'No API credentials. Add API ID, Hash, and Session String in Account Manager.'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -130,7 +197,7 @@ serve(async (req) => {
           last_seen: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
           last_seen_status: ['online', 'recently', 'within_week', 'within_month', 'long_ago'][Math.floor(Math.random() * 5)],
           is_online: Math.random() > 0.8,
-          last_online_duration: Math.floor(Math.random() * 24 * 60) // minutes
+          last_online_duration: Math.floor(Math.random() * 24 * 60)
         }));
 
         await supabaseClient
@@ -146,7 +213,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockResults,
-          count: mockResults.length 
+          count: mockResults.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -203,21 +271,22 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockResults,
-          count: mockResults.length 
+          count: mockResults.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'messenger_customers': {
-        const { account_id, time_range, min_messages } = params;
+        const { time_range, min_messages } = params;
         
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'messenger_customers',
-            source: account_id,
+            source: account_id || 'default',
             status: 'processing'
           })
           .select()
@@ -225,7 +294,6 @@ serve(async (req) => {
 
         if (error) throw error;
 
-        // Extract customers who have messaged (potential leads)
         const mockResults = Array.from({ length: 80 }, (_, i) => ({
           user_id: `customer_${i + 1}`,
           username: Math.random() > 0.2 ? `customer_user_${i + 1}` : null,
@@ -237,7 +305,7 @@ serve(async (req) => {
           last_message_date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
           response_rate: Math.random(),
           avg_response_time_minutes: Math.floor(Math.random() * 60),
-          sentiment_score: Math.random() * 2 - 1, // -1 to 1
+          sentiment_score: Math.random() * 2 - 1,
           is_potential_buyer: Math.random() > 0.3,
           tags: ['interested', 'lead', 'customer', 'support'][Math.floor(Math.random() * 4)],
           notes: Math.random() > 0.7 ? `Note for customer ${i + 1}` : null
@@ -256,21 +324,22 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockResults,
-          count: mockResults.length 
+          count: mockResults.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'contacts_filtered': {
-        const { account_id, phone_prefixes, country_codes, exclude_prefixes } = params;
+        const { phone_prefixes, country_codes, exclude_prefixes } = params;
         
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'contacts_filtered',
-            source: account_id,
+            source: account_id || 'default',
             status: 'processing'
           })
           .select()
@@ -278,7 +347,6 @@ serve(async (req) => {
 
         if (error) throw error;
 
-        // Filter contacts by phone number patterns
         const allContacts = Array.from({ length: 200 }, (_, i) => {
           const countryCode = ['+1', '+44', '+91', '+49', '+33', '+81', '+86'][Math.floor(Math.random() * 7)];
           return {
@@ -293,7 +361,6 @@ serve(async (req) => {
           };
         });
 
-        // Apply filters
         let filteredContacts = allContacts;
         if (phone_prefixes && phone_prefixes.length > 0) {
           filteredContacts = filteredContacts.filter(c => 
@@ -325,21 +392,20 @@ serve(async (req) => {
           extraction_id: data.id, 
           results: filteredContacts,
           count: filteredContacts.length,
-          total_before_filter: allContacts.length
+          total_before_filter: allContacts.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'chats': {
-        const { account_id } = params;
-        
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'chats',
-            source: account_id,
+            source: account_id || 'default',
             status: 'processing'
           })
           .select()
@@ -368,21 +434,20 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockChats,
-          count: mockChats.length 
+          count: mockChats.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'contacts': {
-        const { account_id } = params;
-        
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'contacts',
-            source: account_id,
+            source: account_id || 'default',
             status: 'processing'
           })
           .select()
@@ -411,21 +476,20 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockContacts,
-          count: mockContacts.length 
+          count: mockContacts.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       case 'archived': {
-        const { account_id } = params;
-        
         const { data, error } = await supabaseClient
           .from('telegram_extractions')
           .insert({
             user_id: user.id,
             extraction_type: 'archived',
-            source: account_id,
+            source: account_id || 'default',
             status: 'processing'
           })
           .select()
@@ -453,7 +517,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           extraction_id: data.id, 
           results: mockArchived,
-          count: mockArchived.length 
+          count: mockArchived.length,
+          real_api_configured: hasValidSession
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -474,7 +539,7 @@ serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Invalid action' }), {
+        return new Response(JSON.stringify({ error: 'Unknown action' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
