@@ -84,6 +84,9 @@ verify_jwt = true
 [functions.telegram-groups]
 verify_jwt = true
 
+[functions.telegram-bot]
+verify_jwt = false
+
 [functions.linkedin-extract]
 verify_jwt = true
 

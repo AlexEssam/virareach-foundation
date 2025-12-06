@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
   Smartphone, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download, Pencil
+  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download, Pencil, Bot, Timer
 } from "lucide-react";
 
 interface TelegramAccount {
@@ -86,6 +86,12 @@ export default function TelegramAccountManager() {
   const [editSessionString, setEditSessionString] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Bot verification code
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<Date | null>(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
@@ -106,6 +112,57 @@ export default function TelegramAccountManager() {
       setApiHash(globalApiHash);
     }
   }, [globalSettingsLoaded, globalApiId, globalApiHash]);
+
+  // Timer for verification code expiry
+  useEffect(() => {
+    if (!codeExpiresAt) {
+      setTimeRemaining(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const remaining = Math.max(0, Math.floor((codeExpiresAt.getTime() - now.getTime()) / 1000));
+      setTimeRemaining(remaining);
+      
+      if (remaining === 0) {
+        setVerificationCode(null);
+        setCodeExpiresAt(null);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [codeExpiresAt]);
+
+  // Poll for credential updates when verification code is active
+  useEffect(() => {
+    if (!verificationCode) return;
+
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('telegram_api_id, telegram_api_hash')
+        .eq('id', user!.id)
+        .single();
+
+      if (data?.telegram_api_id && data?.telegram_api_hash) {
+        if (data.telegram_api_id !== globalApiId || data.telegram_api_hash !== globalApiHash) {
+          setGlobalApiId(data.telegram_api_id);
+          setGlobalApiHash(data.telegram_api_hash);
+          setApiId(data.telegram_api_id);
+          setApiHash(data.telegram_api_hash);
+          setVerificationCode(null);
+          setCodeExpiresAt(null);
+          toast({ 
+            title: "Credentials Updated!", 
+            description: "Your Telegram API credentials have been saved via the bot" 
+          });
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [verificationCode, globalApiId, globalApiHash, user]);
 
   const fetchGlobalApiSettings = async () => {
     const { data, error } = await supabase
@@ -186,6 +243,61 @@ export default function TelegramAccountManager() {
     } finally {
       setSavingGlobalSettings(false);
     }
+  };
+
+  const generateVerificationCode = async () => {
+    setGeneratingCode(true);
+    try {
+      // Generate a random code like VR-A1B2C3
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let randomPart = '';
+      for (let i = 0; i < 6; i++) {
+        randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const code = `VR-${randomPart}`;
+      
+      // Set expiry to 5 minutes from now
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+      // Delete any existing unused codes for this user
+      await supabase
+        .from('telegram_verification_codes')
+        .delete()
+        .eq('user_id', user!.id)
+        .eq('used', false);
+
+      // Insert new code
+      const { error } = await supabase
+        .from('telegram_verification_codes')
+        .insert({
+          user_id: user!.id,
+          code,
+          expires_at: expiresAt.toISOString(),
+          used: false
+        });
+
+      if (error) throw error;
+
+      setVerificationCode(code);
+      setCodeExpiresAt(expiresAt);
+      setTimeRemaining(300); // 5 minutes in seconds
+      
+      toast({ 
+        title: "Verification Code Generated", 
+        description: "Send this code to the bot within 5 minutes" 
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const formatTimeRemaining = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const fetchAccounts = async () => {
@@ -799,6 +911,117 @@ export default function TelegramAccountManager() {
                     )}
                     Save Global API Settings
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Bot Registration Card */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="h-5 w-5" />
+                    Link via Telegram Bot
+                    <Badge variant="outline" className="ml-2">Recommended</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Securely register your API credentials by sending them to our Telegram bot
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!verificationCode ? (
+                    <>
+                      <div className="p-4 bg-background/50 border rounded-lg space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">1</div>
+                          <p className="text-sm">Generate a verification code below</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">2</div>
+                          <p className="text-sm">Open the ViraReach bot in Telegram</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">3</div>
+                          <p className="text-sm">Send: <code className="bg-muted px-1 rounded">/register CODE API_ID API_HASH</code></p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={generateVerificationCode} 
+                        disabled={generatingCode}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {generatingCode ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Key className="mr-2 h-4 w-4" />
+                        )}
+                        Generate Verification Code
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-6 bg-background border rounded-lg text-center space-y-4">
+                        <p className="text-sm text-muted-foreground">Your verification code:</p>
+                        <div className="flex items-center justify-center gap-2">
+                          <code className="text-3xl font-mono font-bold tracking-wider bg-muted px-4 py-2 rounded-lg">
+                            {verificationCode}
+                          </code>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => {
+                              navigator.clipboard.writeText(verificationCode);
+                              toast({ title: "Copied!", description: "Verification code copied to clipboard" });
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-amber-600">
+                          <Timer className="h-4 w-4" />
+                          <span className="text-sm font-medium">Expires in {formatTimeRemaining(timeRemaining)}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                        <p className="text-sm font-medium">Send this command to the bot:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto">
+                            /register {verificationCode} YOUR_API_ID YOUR_API_HASH
+                          </code>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`/register ${verificationCode} YOUR_API_ID YOUR_API_HASH`);
+                              toast({ title: "Copied!", description: "Command template copied to clipboard" });
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => window.open('https://t.me/ViraReachBot', '_blank')}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Open Bot in Telegram
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => {
+                            setVerificationCode(null);
+                            setCodeExpiresAt(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
