@@ -55,6 +55,7 @@ export default function TelegramAccountManager() {
   const [accountName, setAccountName] = useState("");
   const [apiId, setApiId] = useState("");
   const [apiHash, setApiHash] = useState("");
+  const [sessionString, setSessionString] = useState("");
   
   // Proxy settings
   const [proxyHost, setProxyHost] = useState("");
@@ -130,7 +131,7 @@ export default function TelegramAccountManager() {
           proxy_username: proxyUsername || null,
           proxy_password: proxyPassword || null,
           status: 'active',
-          session_data: JSON.stringify({ verified: true, loginMethod: 'qr' })
+          session_data: sessionString || null
         })
         .select()
         .single();
@@ -145,6 +146,7 @@ export default function TelegramAccountManager() {
       setAccountName("");
       setApiId("");
       setApiHash("");
+      setSessionString("");
       setProxyHost("");
       setProxyPort("");
       setProxyUsername("");
@@ -439,13 +441,13 @@ export default function TelegramAccountManager() {
                 </Card>
 
                 <div className="space-y-6">
-                  <Card>
+                <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Key className="h-5 w-5" />
-                        API Credentials (Optional)
+                        API Credentials (Required for Real Extraction)
                       </CardTitle>
-                      <CardDescription>For advanced automation features</CardDescription>
+                      <CardDescription>Get from my.telegram.org/apps</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
@@ -460,14 +462,39 @@ export default function TelegramAccountManager() {
                         <Label>API Hash</Label>
                         <Input
                           type="password"
-                          placeholder="••••••••••••••••"
+                          placeholder="0123456789abcdef0123456789abcdef"
                           value={apiHash}
                           onChange={(e) => setApiHash(e.target.value)}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Get credentials from my.telegram.org
-                      </p>
+                      <div className="space-y-2">
+                        <Label>Session String</Label>
+                        <textarea
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="Paste your Telegram session string here..."
+                          value={sessionString}
+                          onChange={(e) => setSessionString(e.target.value)}
+                        />
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-2">
+                        <p className="font-medium">How to get Session String:</p>
+                        <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                          <li>Go to <a href="https://my.telegram.org/apps" target="_blank" rel="noopener" className="text-primary underline">my.telegram.org/apps</a></li>
+                          <li>Create an app to get API ID and API Hash</li>
+                          <li>Use Python script to generate session string:</li>
+                        </ol>
+                        <pre className="mt-2 p-2 bg-background rounded text-[10px] overflow-x-auto">
+{`pip install telethon
+python -c "
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
+api_id = YOUR_API_ID
+api_hash = 'YOUR_API_HASH'
+with TelegramClient(StringSession(), api_id, api_hash) as c:
+    print(c.session.save())
+"`}
+                        </pre>
+                      </div>
                     </CardContent>
                   </Card>
 
