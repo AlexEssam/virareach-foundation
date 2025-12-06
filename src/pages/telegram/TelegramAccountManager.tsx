@@ -51,6 +51,12 @@ export default function TelegramAccountManager() {
   const [loading, setLoading] = useState(false);
   const [loginStep, setLoginStep] = useState<'idle' | 'opened' | 'success'>('idle');
   
+  // Global API settings
+  const [globalApiId, setGlobalApiId] = useState("");
+  const [globalApiHash, setGlobalApiHash] = useState("");
+  const [globalSettingsLoaded, setGlobalSettingsLoaded] = useState(false);
+  const [savingGlobalSettings, setSavingGlobalSettings] = useState(false);
+  
   // New account form
   const [phoneNumber, setPhoneNumber] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -89,8 +95,61 @@ export default function TelegramAccountManager() {
   useEffect(() => {
     if (user) {
       fetchAccounts();
+      fetchGlobalApiSettings();
     }
   }, [user]);
+
+  // Auto-fill API credentials when global settings are loaded
+  useEffect(() => {
+    if (globalSettingsLoaded && !apiId && !apiHash) {
+      setApiId(globalApiId);
+      setApiHash(globalApiHash);
+    }
+  }, [globalSettingsLoaded, globalApiId, globalApiHash]);
+
+  const fetchGlobalApiSettings = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('telegram_api_id, telegram_api_hash')
+      .eq('id', user!.id)
+      .single();
+
+    if (data) {
+      setGlobalApiId(data.telegram_api_id || "");
+      setGlobalApiHash(data.telegram_api_hash || "");
+      // Auto-fill form fields
+      if (data.telegram_api_id) setApiId(data.telegram_api_id);
+      if (data.telegram_api_hash) setApiHash(data.telegram_api_hash);
+    }
+    setGlobalSettingsLoaded(true);
+    if (error && error.code !== 'PGRST116') console.error('Error fetching global settings:', error);
+  };
+
+  const handleSaveGlobalApiSettings = async () => {
+    setSavingGlobalSettings(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          telegram_api_id: globalApiId || null,
+          telegram_api_hash: globalApiHash || null
+        })
+        .eq('id', user!.id);
+
+      if (error) throw error;
+
+      // Auto-fill form with new global settings
+      setApiId(globalApiId);
+      setApiHash(globalApiHash);
+
+      toast({ title: "Global API Settings Saved", description: "These credentials will auto-fill for new accounts" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setSavingGlobalSettings(false);
+    }
+  };
 
   const fetchAccounts = async () => {
     const { data, error } = await supabase
@@ -278,10 +337,18 @@ export default function TelegramAccountManager() {
           </div>
 
           <Tabs defaultValue="accounts" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="accounts">Accounts</TabsTrigger>
               <TabsTrigger value="add">Add Account</TabsTrigger>
-              <TabsTrigger value="rotation">Rotation Settings</TabsTrigger>
+              <TabsTrigger value="api-settings">
+                API Settings
+                {globalApiId && globalApiHash && (
+                  <Badge variant="outline" className="ml-2 bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1">
+                    <Check className="h-2 w-2" />
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="rotation">Rotation</TabsTrigger>
             </TabsList>
 
             <TabsContent value="accounts" className="space-y-6">
@@ -509,9 +576,18 @@ export default function TelegramAccountManager() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Key className="h-5 w-5" />
-                        API Credentials (Required for Real Extraction)
+                        API Credentials
+                        {globalApiId && globalApiHash && (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
+                            Auto-filled from Global Settings
+                          </Badge>
+                        )}
                       </CardTitle>
-                      <CardDescription>Get from my.telegram.org/apps</CardDescription>
+                      <CardDescription>
+                        {globalApiId && globalApiHash 
+                          ? "Pre-filled from your saved global API settings" 
+                          : "Configure in API Settings tab for auto-fill"}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
@@ -540,25 +616,12 @@ export default function TelegramAccountManager() {
                           onChange={(e) => setSessionString(e.target.value)}
                         />
                       </div>
-                      <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-2">
-                        <p className="font-medium">How to get Session String:</p>
-                        <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                          <li>Go to <a href="https://my.telegram.org/apps" target="_blank" rel="noopener" className="text-primary underline">my.telegram.org/apps</a></li>
-                          <li>Create an app to get API ID and API Hash</li>
-                          <li>Use Python script to generate session string:</li>
-                        </ol>
-                        <pre className="mt-2 p-2 bg-background rounded text-[10px] overflow-x-auto">
-{`pip install telethon
-python -c "
-from telethon.sync import TelegramClient
-from telethon.sessions import StringSession
-api_id = YOUR_API_ID
-api_hash = 'YOUR_API_HASH'
-with TelegramClient(StringSession(), api_id, api_hash) as c:
-    print(c.session.save())
-"`}
-                        </pre>
-                      </div>
+                      {!globalApiId && !globalApiHash && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs space-y-2">
+                          <p className="font-medium text-amber-600">Tip: Save credentials globally</p>
+                          <p className="text-muted-foreground">Go to the <strong>API Settings</strong> tab to save your API credentials once. They'll auto-fill for all new accounts!</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -619,6 +682,119 @@ with TelegramClient(StringSession(), api_id, api_hash) as c:
                   )}
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Global API Settings Tab */}
+            <TabsContent value="api-settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Global Telegram API Credentials
+                    {globalApiId && globalApiHash && (
+                      <Badge className="bg-green-500/20 text-green-600 border-green-500/20">
+                        <Check className="h-3 w-3 mr-1" />
+                        Configured
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Save your Telegram API credentials once and they'll auto-fill for all new accounts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">1</div>
+                      <div>
+                        <p className="font-medium">Get your API credentials</p>
+                        <p className="text-sm text-muted-foreground">Visit <a href="https://my.telegram.org/apps" target="_blank" rel="noopener" className="text-primary underline">my.telegram.org/apps</a> and create an application to get your API ID and Hash</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">2</div>
+                      <div>
+                        <p className="font-medium">Enter them below</p>
+                        <p className="text-sm text-muted-foreground">These will be saved securely and used for all your Telegram accounts</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">3</div>
+                      <div>
+                        <p className="font-medium">Auto-fill enabled</p>
+                        <p className="text-sm text-muted-foreground">When adding new accounts, API credentials will be pre-filled automatically</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>API ID</Label>
+                      <Input
+                        placeholder="12345678"
+                        value={globalApiId}
+                        onChange={(e) => setGlobalApiId(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Your Telegram API ID (numbers only)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>API Hash</Label>
+                      <Input
+                        type="password"
+                        placeholder="0123456789abcdef0123456789abcdef"
+                        value={globalApiHash}
+                        onChange={(e) => setGlobalApiHash(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Your Telegram API Hash (32 characters)</p>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleSaveGlobalApiSettings} 
+                    disabled={savingGlobalSettings}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {savingGlobalSettings ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Global API Settings
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>How to Get Session String</CardTitle>
+                  <CardDescription>Required for each account to enable real API extraction</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    After saving your global API credentials, you'll need to generate a session string for each Telegram account. 
+                    Use this Python script:
+                  </p>
+                  <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
+{`pip install telethon
+
+python -c "
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
+
+api_id = ${globalApiId || 'YOUR_API_ID'}
+api_hash = '${globalApiHash || 'YOUR_API_HASH'}'
+
+with TelegramClient(StringSession(), api_id, api_hash) as client:
+    print('Your session string:')
+    print(client.session.save())
+"`}
+                  </pre>
+                  <p className="text-sm text-muted-foreground">
+                    Run this script, login with your phone number, and copy the output session string to use when adding accounts.
+                  </p>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="rotation" className="space-y-6">
