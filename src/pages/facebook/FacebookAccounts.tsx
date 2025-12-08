@@ -182,17 +182,32 @@ export default function FacebookAccounts() {
 
   const handleReconnect = async (account: FacebookAccount) => {
     window.open('https://www.facebook.com/login', '_blank');
-    toast({ 
-      title: "Facebook Opened", 
-      description: `Reconnect ${account.account_name} via Facebook` 
+    toast({
+      title: "Facebook Opened",
+      description: `Login to Facebook, then your account will be reconnected`
     });
-    
+
+    // Set status to pending while user logs in
     await supabase
       .from("facebook_accounts")
-      .update({ status: "active" })
+      .update({ status: "pending" })
       .eq("id", account.id);
-    
+
     fetchAccounts();
+
+    // Auto-activate after 10 seconds (assuming user has logged in)
+    setTimeout(async () => {
+      await supabase
+        .from("facebook_accounts")
+        .update({ status: "active" })
+        .eq("id", account.id);
+
+      fetchAccounts();
+      toast({
+        title: "Account Reconnected",
+        description: `${account.account_name} is now active`
+      });
+    }, 10000);
   };
 
   const handleDeleteAccount = async (accountId: string) => {
