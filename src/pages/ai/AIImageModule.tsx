@@ -1,43 +1,46 @@
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { 
-  Image, 
-  Wand2, 
-  Palette, 
-  Copy, 
-  Eraser, 
-  ZoomIn, 
-  Smile, 
+import { useAiImage } from "@/hooks/useAiImage";
+import ImageGenerateTab from "@/components/ai/image/ImageGenerateTab";
+import ImageImg2ImgTab from "@/components/ai/image/ImageImg2ImgTab";
+import ImageSketchTab from "@/components/ai/image/ImageSketchTab";
+import ImageStyleTab from "@/components/ai/image/ImageStyleTab";
+import ImageVariationsTab from "@/components/ai/image/ImageVariationsTab";
+import ImageInpaintTab from "@/components/ai/image/ImageInpaintTab";
+import ImageUpscaleTab from "@/components/ai/image/ImageUpscaleTab";
+import ImageFaceTab from "@/components/ai/image/ImageFaceTab";
+import ImageResultsSection from "@/components/ai/image/ImageResultsSection";
+import {
+  Image as ImageIcon,
+  Wand2,
+  Palette,
+  Copy,
+  Eraser,
+  ZoomIn,
+  Smile,
   Layers,
   PenTool,
-  Download,
-  Loader2,
-  LogIn
+  LogIn,
 } from "lucide-react";
 
 export default function AIImageModule() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Form states
+
+  const { loading, generatedImage, generatedImages, callAIImage } = useAiImage();
+
   const [prompt, setPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [styleId, setStyleId] = useState("oil_painting");
   const [variationCount, setVariationCount] = useState(2);
   const [batchCount, setBatchCount] = useState(4);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,59 +53,6 @@ export default function AIImageModule() {
     }
   };
 
-  const callAIImage = async (action: string, params: Record<string, unknown>) => {
-    setLoading(true);
-    setGeneratedImage(null);
-    setGeneratedImages([]);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-image", {
-        body: { action, ...params }
-      });
-
-      if (error) {
-        console.error("Function invoke error:", error);
-        throw new Error(error.message || "Failed to call AI service");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-      
-      if (data?.images && data.images.length > 0) {
-        setGeneratedImages(data.images);
-        toast.success(`Generated ${data.images.length} images!`);
-      } else {
-        const imageUrl =
-          data?.image_url ||
-          data?.styled_image_url ||
-          data?.upscaled_image_url || 
-          data?.enhanced_face_image ||
-          data?.result_image_url ||
-          data?.transparent_image_url;
-
-        if (imageUrl) {
-          setGeneratedImage(imageUrl);
-          toast.success("Image generated successfully!");
-        } else {
-          console.error("No image in response:", data);
-          toast.error("No image was generated. Please try again.");
-        }
-      }
-    } catch (error: any) {
-      console.error("AI Image error:", error);
-      if (error.message?.includes("Rate limit")) {
-        toast.error("Rate limit exceeded. Please wait a moment and try again.");
-      } else if (error.message?.includes("Credits")) {
-        toast.error("Credits exhausted. Please add more credits to continue.");
-      } else {
-        toast.error(error.message || "Failed to process image");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const downloadImage = (imageUrl: string, filename: string) => {
     const link = document.createElement("a");
     link.href = imageUrl;
@@ -112,18 +62,6 @@ export default function AIImageModule() {
     document.body.removeChild(link);
   };
 
-  const styles = [
-    { id: "oil_painting", name: "Oil Painting" },
-    { id: "watercolor", name: "Watercolor" },
-    { id: "pencil_sketch", name: "Pencil Sketch" },
-    { id: "anime", name: "Anime" },
-    { id: "pop_art", name: "Pop Art" },
-    { id: "cyberpunk", name: "Cyberpunk" },
-    { id: "vintage", name: "Vintage" },
-    { id: "minimalist", name: "Minimalist" },
-  ];
-
-  // Show login prompt if not authenticated
   if (!authLoading && !user) {
     return (
       <div className="flex min-h-screen bg-background">
@@ -132,7 +70,7 @@ export default function AIImageModule() {
           <div className="max-w-md mx-auto mt-20">
             <Card>
               <CardHeader className="text-center">
-                <Image className="h-12 w-12 text-primary mx-auto mb-2" />
+                <ImageIcon className="h-12 w-12 text-primary mx-auto mb-2" />
                 <CardTitle>Login Required</CardTitle>
                 <CardDescription>
                   Please log in to access AI Image features
@@ -158,7 +96,7 @@ export default function AIImageModule() {
         <div className="max-w-6xl mx-auto space-y-6">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Image className="h-8 w-8 text-primary" />
+              <ImageIcon className="h-8 w-8 text-primary" />
               AI Image Module
             </h1>
             <p className="text-muted-foreground mt-2">
@@ -202,416 +140,104 @@ export default function AIImageModule() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Generate Tab */}
             <TabsContent value="generate">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Text to Image</CardTitle>
-                  <CardDescription>Generate images from text descriptions</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Describe the image you want to generate..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="flex gap-4 flex-wrap">
-                    <Button
-                      onClick={() => callAIImage("generate_image", { prompt })}
-                      disabled={loading || !prompt}
-                    >
-                      {loading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Wand2 className="h-4 w-4 mr-2" />
-                      )}
-                      Generate
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        callAIImage("batch_generate", {
-                          prompt,
-                          count: batchCount,
-                          high_quality: true,
-                        })
-                      }
-                      disabled={loading || !prompt}
-                    >
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      توليد {batchCount} صور بجودة عالية
-                    </Button>
-                    <Select
-                      value={batchCount.toString()}
-                      onValueChange={(v) => setBatchCount(parseInt(v))}
-                    >
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="4">4</SelectItem>
-                        <SelectItem value="6">6</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+              <ImageGenerateTab
+                prompt={prompt}
+                setPrompt={setPrompt}
+                batchCount={batchCount}
+                setBatchCount={setBatchCount}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Img2Img Tab */}
             <TabsContent value="img2img">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Image to Image</CardTitle>
-                  <CardDescription>Transform existing images with AI</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Image
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Uploaded" className="max-h-48 rounded-lg" />
-                  )}
-                  <Textarea
-                    placeholder="Describe how to transform the image..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={2}
-                  />
-                  <Button
-                    onClick={() =>
-                      callAIImage("image_to_image", { image: uploadedImage, prompt })
-                    }
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Transform
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageImg2ImgTab
+                prompt={prompt}
+                setPrompt={setPrompt}
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Sketch Tab */}
             <TabsContent value="sketch">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sketch to Image</CardTitle>
-                  <CardDescription>Convert sketches into detailed images</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Sketch
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Sketch" className="max-h-48 rounded-lg" />
-                  )}
-                  <Textarea
-                    placeholder="Describe what the sketch represents..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={2}
-                  />
-                  <Button
-                    onClick={() =>
-                      callAIImage("sketch_to_image", { image: uploadedImage, prompt })
-                    }
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Convert Sketch
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageSketchTab
+                prompt={prompt}
+                setPrompt={setPrompt}
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Style Transfer Tab */}
             <TabsContent value="style">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Style Transfer</CardTitle>
-                  <CardDescription>Apply artistic styles to images</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Image
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
-                  )}
-                  <Select value={styleId} onValueChange={setStyleId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {styles.map((style) => (
-                        <SelectItem key={style.id} value={style.id}>
-                          {style.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={() =>
-                      callAIImage("style_transfer", {
-                        image: uploadedImage,
-                        style_id: styleId,
-                      })
-                    }
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Apply Style
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageStyleTab
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                styleId={styleId}
+                setStyleId={setStyleId}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Variations Tab */}
             <TabsContent value="variations">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Image Variations</CardTitle>
-                  <CardDescription>Generate creative variations of an image</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Image
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
-                  )}
-                  <div className="flex gap-4 items-center">
-                    <span className="text-sm">Number of variations:</span>
-                    <Select
-                      value={variationCount.toString()}
-                      onValueChange={(v) => setVariationCount(parseInt(v))}
-                    >
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                        <SelectItem value="4">4</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={() =>
-                      callAIImage("variations", {
-                        image: uploadedImage,
-                        count: variationCount,
-                      })
-                    }
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Generate Variations
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageVariationsTab
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                variationCount={variationCount}
+                setVariationCount={setVariationCount}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Inpainting Tab */}
             <TabsContent value="inpaint">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Inpainting</CardTitle>
-                  <CardDescription>Edit specific areas of an image</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Image
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
-                  )}
-                  <Textarea
-                    placeholder="Describe what you want to change or add..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    rows={2}
-                  />
-                  <Button
-                    onClick={() =>
-                      callAIImage("inpainting", { image: uploadedImage, prompt })
-                    }
-                    disabled={loading || !uploadedImage || !prompt}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Edit Image
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageInpaintTab
+                prompt={prompt}
+                setPrompt={setPrompt}
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Upscale Tab */}
             <TabsContent value="upscale">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upscale</CardTitle>
-                  <CardDescription>Enhance and upscale images</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Image
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
-                  )}
-                  <Button
-                    onClick={() => callAIImage("upscale", { image: uploadedImage })}
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Upscale Image
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageUpscaleTab
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
 
-            {/* Face Enhancement Tab */}
             <TabsContent value="face">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Face Enhancement</CardTitle>
-                  <CardDescription>Enhance facial features in photos</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Upload Photo
-                  </Button>
-                  {uploadedImage && (
-                    <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
-                  )}
-                  <Button
-                    onClick={() => callAIImage("face_enhance", { image: uploadedImage })}
-                    disabled={loading || !uploadedImage}
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Enhance Face
-                  </Button>
-                </CardContent>
-              </Card>
+              <ImageFaceTab
+                uploadedImage={uploadedImage}
+                handleImageUpload={handleImageUpload}
+                fileInputRef={fileInputRef}
+                loading={loading}
+                callAIImage={callAIImage}
+              />
             </TabsContent>
           </Tabs>
 
-          {/* Results Section */}
-          {loading && (
-            <Card>
-              <CardContent className="py-12">
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Generating your image...</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {!loading && (generatedImage || generatedImages.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Generated Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {generatedImage && (
-                  <div className="space-y-4">
-                    <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
-                      <img 
-                        src={generatedImage} 
-                        alt="Generated" 
-                        className="max-w-full max-h-[600px] mx-auto object-contain"
-                        onError={(e) => {
-                          console.error("Image failed to load");
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    </div>
-                    <Button onClick={() => downloadImage(generatedImage, "ai-generated.png")}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                )}
-                {generatedImages.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {generatedImages.map((img, idx) => (
-                      <div key={idx} className="space-y-2">
-                        <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
-                          <img 
-                            src={img} 
-                            alt={`Generated ${idx + 1}`} 
-                            className="w-full object-contain"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => downloadImage(img, `ai-generated-${idx + 1}.png`)}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <ImageResultsSection
+            loading={loading}
+            generatedImage={generatedImage}
+            generatedImages={generatedImages}
+            onDownload={downloadImage}
+          />
         </div>
       </main>
     </div>
