@@ -13,7 +13,7 @@ import {
   SiInstagram, 
   SiTelegram 
 } from "@icons-pack/react-simple-icons";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -96,7 +96,6 @@ export default function Dashboard() {
   const modules = [
     {
       title: "Facebook",
-      moduleKey: "facebook",
       description: "Automate posts, messages, and engagement",
       icon: SiFacebook,
       color: "#1877F2",
@@ -104,7 +103,6 @@ export default function Dashboard() {
     },
     {
       title: "WhatsApp",
-      moduleKey: "whatsapp",
       description: "Bulk messaging and auto-replies",
       icon: SiWhatsapp,
       color: "#25D366",
@@ -112,7 +110,6 @@ export default function Dashboard() {
     },
     {
       title: "Instagram",
-      moduleKey: "instagram",
       description: "Schedule posts and manage DMs",
       icon: SiInstagram,
       color: "#E4405F",
@@ -120,7 +117,6 @@ export default function Dashboard() {
     },
     {
       title: "Telegram",
-      moduleKey: "telegram",
       description: "Channel management and bots",
       icon: SiTelegram,
       color: "#0088CC",
@@ -128,7 +124,6 @@ export default function Dashboard() {
     },
     {
       title: "AI Image",
-      moduleKey: "ai_image",
       description: "Generate and edit images with AI",
       icon: Image,
       color: "#8B5CF6",
@@ -201,11 +196,7 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold mb-4">Automation Modules</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {modules.map((module, index) => (
-                <div
-                  key={module.moduleKey}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${0.7 + index * 0.1}s` }}
-                >
+                <div key={module.title} className="animate-fade-in" style={{ animationDelay: `${0.7 + index * 0.1}s` }}>
                   <ModuleCard
                     title={module.title}
                     description={module.description}
