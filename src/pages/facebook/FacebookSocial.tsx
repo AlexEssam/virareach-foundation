@@ -52,7 +52,7 @@ export default function FacebookSocial() {
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [actionType, setActionType] = useState("friend_request");
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<string | undefined>(undefined);
   const [targets, setTargets] = useState("");
   const [content, setContent] = useState("");
 
@@ -212,12 +212,17 @@ export default function FacebookSocial() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Facebook Account</label>
-                      <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                      <Select
+                        value={selectedAccount}
+                        onValueChange={(val) =>
+                          setSelectedAccount(val === "none" ? undefined : val)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select account" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No account selected</SelectItem>
+                          <SelectItem value="none">No account selected</SelectItem>
                           {accounts.map((account) => (
                             <SelectItem key={account.id} value={account.id}>
                               {account.account_name || account.account_email}

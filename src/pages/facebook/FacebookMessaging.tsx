@@ -53,7 +53,7 @@ export default function FacebookMessaging() {
   const [sending, setSending] = useState(false);
   const [messageType, setMessageType] = useState("dm");
   const [targetType, setTargetType] = useState("friends");
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<string | undefined>(undefined);
   const [content, setContent] = useState("");
   const [recipients, setRecipients] = useState("");
 
@@ -199,12 +199,17 @@ export default function FacebookMessaging() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Facebook Account</label>
-                      <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                      <Select
+                        value={selectedAccount}
+                        onValueChange={(val) =>
+                          setSelectedAccount(val === "none" ? undefined : val)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select account (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No account selected</SelectItem>
+                          <SelectItem value="none">No account selected</SelectItem>
                           {accounts.map((account) => (
                             <SelectItem key={account.id} value={account.id}>
                               {account.account_name || account.account_email}
