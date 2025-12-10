@@ -51,15 +51,39 @@ export default function WhatsAppContacts() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-contacts", { 
-        method: "GET",
-        body: search ? { search } : undefined,
+      const response = await supabase.functions.invoke("whatsapp-contacts", { 
+        body: { 
+          action: "list",
+          search: search || undefined,
+        },
       });
-      if (data?.contacts) {
-        setContacts(data.contacts);
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to load contacts";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Unable to load contacts from the server right now. Please try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
+
+      if (response.data?.contacts) {
+        setContacts(response.data.contacts);
+      } else {
+        setContacts([]);
       }
     } catch (error) {
       console.error("Error fetching contacts:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load contacts",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -73,15 +97,23 @@ export default function WhatsAppContacts() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("whatsapp-contacts", {
+      const response = await supabase.functions.invoke("whatsapp-contacts", {
         body: {
+          action: "create",
           phone_number: newPhone,
           name: newName || null,
           tags: newTags ? newTags.split(",").map(t => t.trim()) : [],
         },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to add contact";
+
+        throw new Error(rawMessage);
+      }
 
       toast({ title: "Contact Added" });
       setAddDialogOpen(false);
@@ -90,7 +122,7 @@ export default function WhatsAppContacts() {
       setNewTags("");
       fetchContacts();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to add contact", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -105,18 +137,28 @@ export default function WhatsAppContacts() {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-contacts?action=convert", {
-        body: { numbers },
+      const response = await supabase.functions.invoke("whatsapp-contacts", {
+        body: { 
+          action: "convert",
+          numbers,
+        },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to convert numbers";
 
-      toast({ title: "Success", description: data.message });
+        throw new Error(rawMessage);
+      }
+
+      toast({ title: "Success", description: response.data?.message || "Numbers converted to contacts" });
       setConvertDialogOpen(false);
       setNumbersToConvert("");
       fetchContacts();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to convert numbers", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -124,14 +166,26 @@ export default function WhatsAppContacts() {
 
   const handleDeleteContact = async (id: string) => {
     try {
-      await supabase.functions.invoke("whatsapp-contacts", {
-        method: "DELETE",
-        body: { id },
+      const response = await supabase.functions.invoke("whatsapp-contacts", {
+        body: { 
+          action: "delete",
+          id,
+        },
       });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to delete contact";
+
+        throw new Error(rawMessage);
+      }
+
       toast({ title: "Contact deleted" });
       fetchContacts();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete contact", variant: "destructive" });
     }
   };
 

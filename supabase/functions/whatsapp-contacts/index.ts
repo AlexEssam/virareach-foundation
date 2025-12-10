@@ -34,9 +34,9 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const actionFromUrl = url.searchParams.get("action");
 
-    // GET - fetch contacts
+    // GET - fetch contacts via query string (kept for compatibility, not used by frontend)
     if (req.method === "GET") {
       const search = url.searchParams.get("search") || "";
       const tag = url.searchParams.get("tag");
@@ -69,9 +69,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - create/bulk import/convert contacts
+    // POST - list/create/import/convert/delete contacts (used by frontend)
     if (req.method === "POST") {
       const body = await req.json();
+      const action = (body.action || actionFromUrl) as string | null;
+
+      // List contacts
+      if (action === "list") {
+        const search = body.search || "";
+        const tag = body.tag;
+
+        let query = supabase
+          .from("whatsapp_contacts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false });
+
+        if (search) {
+          query = query.or(`phone_number.ilike.%${search}%,name.ilike.%${search}%`);
+        }
+
+        if (tag) {
+          query = query.contains("tags", [tag]);
+        }
+
+        const { data, error } = await query.limit(200);
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ contacts: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // Bulk import contacts
       if (action === "import") {
@@ -156,7 +190,55 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Single contact create
+      // Delete contact (single or bulk)
+      if (action === "delete") {
+        const { id, ids } = body;
+
+        if (ids && Array.isArray(ids)) {
+          const { error } = await supabase
+            .from("whatsapp_contacts")
+            .delete()
+            .in("id", ids)
+            .eq("user_id", user.id);
+
+          if (error) {
+            return new Response(JSON.stringify({ error: error.message }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          return new Response(JSON.stringify({ success: true, deleted: ids.length }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (!id) {
+          return new Response(JSON.stringify({ error: "Contact ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { error } = await supabase
+          .from("whatsapp_contacts")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Single contact create (default when action is "create" or omitted)
       const { phone_number, name, tags, notes } = body;
       if (!phone_number) {
         return new Response(JSON.stringify({ error: "Phone number is required" }), {
@@ -189,6 +271,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    // PUT and DELETE kept for compatibility, but frontend uses POST+action
     // PUT - update contact
     if (req.method === "PUT") {
       const body = await req.json();
@@ -221,13 +304,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // DELETE - remove contact
+    // DELETE - bulk/single delete via HTTP verb (not used by frontend)
     if (req.method === "DELETE") {
       const body = await req.json();
       const { id, ids } = body;
 
       if (ids && Array.isArray(ids)) {
-        // Bulk delete
         const { error } = await supabase
           .from("whatsapp_contacts")
           .delete()
