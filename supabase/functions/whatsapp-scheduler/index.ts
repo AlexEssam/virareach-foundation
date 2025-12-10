@@ -33,9 +33,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // GET - fetch scheduled campaigns
+    const url = new URL(req.url);
+    const actionFromUrl = url.searchParams.get("action");
+
+    // GET - fetch scheduled campaigns (legacy, not used by frontend now)
     if (req.method === "GET") {
-      const url = new URL(req.url);
       const status = url.searchParams.get("status");
 
       let query = supabase
@@ -62,69 +64,182 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - schedule a campaign
+    // POST - list/schedule/cancel/delete via action
     if (req.method === "POST") {
       const body = await req.json();
-      const { 
-        campaign_name, 
-        message_type, 
-        content, 
-        media_url, 
-        recipients, 
-        scheduled_at,
-        sending_mode,
-        account_id 
-      } = body;
+      const action = (body.action || actionFromUrl) as string | null;
 
-      if (!campaign_name || !recipients || recipients.length === 0 || !scheduled_at) {
-        return new Response(JSON.stringify({ error: "Campaign name, recipients, and scheduled time are required" }), {
-          status: 400,
+      // List scheduled campaigns
+      if (action === "list") {
+        const status = body.status as string | undefined;
+
+        let query = supabase
+          .from("whatsapp_scheduled")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("scheduled_at", { ascending: true });
+
+        if (status) {
+          query = query.eq("status", status);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ scheduled: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const scheduledDate = new Date(scheduled_at);
-      if (scheduledDate <= new Date()) {
-        return new Response(JSON.stringify({ error: "Scheduled time must be in the future" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data, error } = await supabase
-        .from("whatsapp_scheduled")
-        .insert({
-          user_id: user.id,
-          account_id,
-          campaign_name,
-          message_type: message_type || "text",
-          content,
-          media_url,
-          recipients,
+      // Schedule a campaign (default when action is "schedule" or omitted)
+      if (!action || action === "schedule") {
+        const { 
+          campaign_name, 
+          message_type, 
+          content, 
+          media_url, 
+          recipients, 
           scheduled_at,
-          sending_mode: sending_mode || "10_per_min",
-          status: "scheduled",
-        })
-        .select()
-        .single();
+          sending_mode,
+          account_id 
+        } = body;
 
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
+        if (!campaign_name || !recipients || recipients.length === 0 || !scheduled_at) {
+          return new Response(JSON.stringify({ error: "Campaign name, recipients, and scheduled time are required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const scheduledDate = new Date(scheduled_at);
+        if (scheduledDate <= new Date()) {
+          return new Response(JSON.stringify({ error: "Scheduled time must be in the future" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("whatsapp_scheduled")
+          .insert({
+            user_id: user.id,
+            account_id,
+            campaign_name,
+            message_type: message_type || "text",
+            content,
+            media_url,
+            recipients,
+            scheduled_at,
+            sending_mode: sending_mode || "10_per_min",
+            status: "scheduled",
+          })
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          scheduled: data,
+          message: `Campaign scheduled for ${scheduledDate.toLocaleString()}`,
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        scheduled: data,
-        message: `Campaign scheduled for ${scheduledDate.toLocaleString()}`,
-      }), {
+      // Cancel or reschedule
+      if (action === "cancel" || action === "reschedule") {
+        const { id, scheduled_at } = body;
+
+        if (!id) {
+          return new Response(JSON.stringify({ error: "Campaign ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const updates: Record<string, unknown> = {};
+
+        if (action === "cancel") {
+          updates.status = "cancelled";
+        } else if (action === "reschedule" && scheduled_at) {
+          updates.scheduled_at = scheduled_at;
+          updates.status = "scheduled";
+        } else {
+          return new Response(JSON.stringify({ error: "Invalid action" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("whatsapp_scheduled")
+          .update(updates)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .eq("status", "scheduled")
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, scheduled: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Delete scheduled campaign
+      if (action === "delete") {
+        const { id } = body;
+
+        if (!id) {
+          return new Response(JSON.stringify({ error: "Campaign ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { error } = await supabase
+          .from("whatsapp_scheduled")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // PUT - update scheduled campaign (cancel or reschedule)
+    // PUT - legacy cancel/reschedule (not used by frontend now)
     if (req.method === "PUT") {
       const body = await req.json();
       const { id, action, scheduled_at } = body;
@@ -171,7 +286,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // DELETE - remove scheduled campaign
+    // DELETE - legacy delete (not used by frontend now)
     if (req.method === "DELETE") {
       const body = await req.json();
       const { id } = body;

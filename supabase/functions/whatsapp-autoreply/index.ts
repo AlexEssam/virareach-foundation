@@ -33,7 +33,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // GET - fetch auto-reply rules
+    const url = new URL(req.url);
+    const actionFromUrl = url.searchParams.get("action");
+
+    // GET - fetch auto-reply rules (legacy, not used by frontend now)
     if (req.method === "GET") {
       const { data, error } = await supabase
         .from("whatsapp_auto_replies")
@@ -53,46 +56,136 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - create auto-reply rule
+    // POST - list/create/update/delete via action
     if (req.method === "POST") {
       const body = await req.json();
-      const { name, trigger_type, trigger_keywords, response_content, response_media_url, account_id } = body;
+      const action = (body.action || actionFromUrl) as string | null;
 
-      if (!name || !response_content) {
-        return new Response(JSON.stringify({ error: "Name and response content are required" }), {
-          status: 400,
+      // List rules
+      if (action === "list") {
+        const { data, error } = await supabase
+          .from("whatsapp_auto_replies")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ rules: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const { data, error } = await supabase
-        .from("whatsapp_auto_replies")
-        .insert({
-          user_id: user.id,
-          account_id,
-          name,
-          trigger_type: trigger_type || "keyword",
-          trigger_keywords: trigger_keywords || [],
-          response_content,
-          response_media_url,
-          is_active: true,
-        })
-        .select()
-        .single();
+      // Create rule (default when action is "create" or omitted)
+      if (!action || action === "create") {
+        const { name, trigger_type, trigger_keywords, response_content, response_media_url, account_id } = body;
 
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
+        if (!name || !response_content) {
+          return new Response(JSON.stringify({ error: "Name and response content are required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("whatsapp_auto_replies")
+          .insert({
+            user_id: user.id,
+            account_id,
+            name,
+            trigger_type: trigger_type || "keyword",
+            trigger_keywords: trigger_keywords || [],
+            response_content,
+            response_media_url,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, rule: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ success: true, rule: data }), {
+      // Update rule
+      if (action === "update") {
+        const { id, ...updates } = body;
+
+        if (!id) {
+          return new Response(JSON.stringify({ error: "Rule ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("whatsapp_auto_replies")
+          .update(updates)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, rule: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Delete rule
+      if (action === "delete") {
+        const { id } = body;
+
+        if (!id) {
+          return new Response(JSON.stringify({ error: "Rule ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { error } = await supabase
+          .from("whatsapp_auto_replies")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // PUT - update auto-reply rule
+    // PUT - legacy update (not used by frontend now)
     if (req.method === "PUT") {
       const body = await req.json();
       const { id, ...updates } = body;
@@ -124,7 +217,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // DELETE - remove auto-reply rule
+    // DELETE - legacy delete (not used by frontend now)
     if (req.method === "DELETE") {
       const body = await req.json();
       const { id } = body;

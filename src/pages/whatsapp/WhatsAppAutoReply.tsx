@@ -57,12 +57,36 @@ export default function WhatsAppAutoReply() {
   const fetchRules = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-autoreply", { method: "GET" });
-      if (data?.rules) {
-        setRules(data.rules);
+      const response = await supabase.functions.invoke("whatsapp-autoreply", {
+        body: { action: "list" },
+      });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to load auto-reply rules";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Unable to load auto-reply rules from the server right now. Please try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
+
+      if (response.data?.rules) {
+        setRules(response.data.rules);
+      } else {
+        setRules([]);
       }
     } catch (error) {
       console.error("Error fetching rules:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load auto-reply rules",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -76,16 +100,24 @@ export default function WhatsAppAutoReply() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.functions.invoke("whatsapp-autoreply", {
+      const response = await supabase.functions.invoke("whatsapp-autoreply", {
         body: {
+          action: "create",
           name,
           trigger_type: triggerType,
-          trigger_keywords: triggerType === "keyword" ? keywords.split(",").map(k => k.trim()) : [],
+          trigger_keywords: triggerType === "keyword" ? keywords.split(",").map(k => k.trim()).filter(k => k) : [],
           response_content: responseContent,
         },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to create auto-reply rule";
+
+        throw new Error(rawMessage);
+      }
 
       toast({ title: "Auto-reply rule created" });
       setDialogOpen(false);
@@ -94,7 +126,7 @@ export default function WhatsAppAutoReply() {
       setResponseContent("");
       fetchRules();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to create rule", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -102,26 +134,44 @@ export default function WhatsAppAutoReply() {
 
   const handleToggleRule = async (id: string, isActive: boolean) => {
     try {
-      await supabase.functions.invoke("whatsapp-autoreply", {
-        method: "PUT",
-        body: { id, is_active: isActive },
+      const response = await supabase.functions.invoke("whatsapp-autoreply", {
+        body: { action: "update", id, is_active: isActive },
       });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to update rule";
+
+        throw new Error(rawMessage);
+      }
+
       fetchRules();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to update rule", variant: "destructive" });
     }
   };
 
   const handleDeleteRule = async (id: string) => {
     try {
-      await supabase.functions.invoke("whatsapp-autoreply", {
-        method: "DELETE",
-        body: { id },
+      const response = await supabase.functions.invoke("whatsapp-autoreply", {
+        body: { action: "delete", id },
       });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to delete rule";
+
+        throw new Error(rawMessage);
+      }
+
       toast({ title: "Rule deleted" });
       fetchRules();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete rule", variant: "destructive" });
     }
   };
 

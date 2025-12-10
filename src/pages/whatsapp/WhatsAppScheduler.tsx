@@ -53,12 +53,36 @@ export default function WhatsAppScheduler() {
   const fetchScheduled = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-scheduler", { method: "GET" });
-      if (data?.scheduled) {
-        setScheduled(data.scheduled);
+      const response = await supabase.functions.invoke("whatsapp-scheduler", {
+        body: { action: "list" },
+      });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to load scheduled campaigns";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Unable to load scheduled campaigns from the server right now. Please try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
+
+      if (response.data?.scheduled) {
+        setScheduled(response.data.scheduled);
+      } else {
+        setScheduled([]);
       }
     } catch (error) {
       console.error("Error fetching scheduled:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load scheduled campaigns",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -78,8 +102,9 @@ export default function WhatsAppScheduler() {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-scheduler", {
+      const response = await supabase.functions.invoke("whatsapp-scheduler", {
         body: {
+          action: "schedule",
           campaign_name: campaignName,
           message_type: "text",
           content,
@@ -89,9 +114,19 @@ export default function WhatsAppScheduler() {
         },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to schedule campaign";
 
-      toast({ title: "Campaign Scheduled", description: data.message });
+        throw new Error(rawMessage);
+      }
+
+      toast({
+        title: "Campaign Scheduled",
+        description: response.data?.message || "Campaign scheduled successfully.",
+      });
       setDialogOpen(false);
       setCampaignName("");
       setContent("");
@@ -99,7 +134,7 @@ export default function WhatsAppScheduler() {
       setScheduledAt("");
       fetchScheduled();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to schedule campaign", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -107,27 +142,45 @@ export default function WhatsAppScheduler() {
 
   const handleCancel = async (id: string) => {
     try {
-      await supabase.functions.invoke("whatsapp-scheduler", {
-        method: "PUT",
-        body: { id, action: "cancel" },
+      const response = await supabase.functions.invoke("whatsapp-scheduler", {
+        body: { action: "cancel", id },
       });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to cancel campaign";
+
+        throw new Error(rawMessage);
+      }
+
       toast({ title: "Campaign cancelled" });
       fetchScheduled();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to cancel campaign", variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      await supabase.functions.invoke("whatsapp-scheduler", {
-        method: "DELETE",
-        body: { id },
+      const response = await supabase.functions.invoke("whatsapp-scheduler", {
+        body: { action: "delete", id },
       });
+
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to delete campaign";
+
+        throw new Error(rawMessage);
+      }
+
       toast({ title: "Deleted" });
       fetchScheduled();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete campaign", variant: "destructive" });
     }
   };
 
