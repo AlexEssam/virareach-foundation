@@ -34,10 +34,11 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const actionFromUrl = url.searchParams.get("action");
 
     if (req.method === "POST") {
       const body = await req.json();
+      const action = (actionFromUrl || body.action) as string | null;
 
       if (action === "create") {
         // Create new WhatsApp group
@@ -163,6 +164,11 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (req.method === "GET") {

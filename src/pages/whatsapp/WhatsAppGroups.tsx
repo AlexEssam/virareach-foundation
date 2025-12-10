@@ -78,20 +78,30 @@ export default function WhatsAppGroups() {
 
     setCreating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke("whatsapp-groups?action=create", {
-        body: { group_name: groupName },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+      const response = await supabase.functions.invoke("whatsapp-groups", {
+        body: { 
+          action: "create",
+          group_name: groupName,
         },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to create group";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Group creation failed on the server. Please check your WhatsApp groups configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Group Created",
-        description: response.data.message,
+        description: response.data?.message || "Group created successfully (simulation mode).",
       });
       
       setGroupName("");
@@ -120,23 +130,31 @@ export default function WhatsAppGroups() {
 
     setAddingMembers(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke("whatsapp-groups?action=add-members", {
+      const response = await supabase.functions.invoke("whatsapp-groups", {
         body: { 
+          action: "add-members",
           group_id: selectedGroup.id,
           members: memberList,
         },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to add members";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Adding members failed on the server. Please check your WhatsApp groups configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Members Added",
-        description: response.data.message,
+        description: response.data?.message || "Members added (simulation mode).",
       });
       
       setMembers("");
@@ -157,16 +175,26 @@ export default function WhatsAppGroups() {
 
   const handleDeleteGroup = async (groupId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke("whatsapp-groups?action=delete", {
-        body: { group_id: groupId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+      const response = await supabase.functions.invoke("whatsapp-groups", {
+        body: { 
+          action: "delete",
+          group_id: groupId,
         },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to delete group";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Deleting group failed on the server. Please check your WhatsApp groups configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Group Deleted",
