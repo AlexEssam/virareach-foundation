@@ -85,23 +85,32 @@ export default function WhatsAppExtractor() {
 
     setExtracting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      // Call Edge Function; Supabase client will include the current auth token automatically
       const response = await supabase.functions.invoke("whatsapp-extract", {
         body: {
           extraction_type: extractionType,
           source: source || null,
         },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
-      if (response.error) throw response.error;
+      // Handle non-2xx + server error messages more clearly
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to extract contacts";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Extraction failed on the server. Please check your WhatsApp extractor configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Extraction Complete",
-        description: response.data.message,
+        description: response.data?.message || "Contacts extracted (simulation mode).",
       });
       
       setSource("");
