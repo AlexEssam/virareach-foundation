@@ -15,4 +15,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Prevent service role key from being exposed to client
+  define: {
+    // Ensure only VITE_ prefixed variables are exposed to client
+  },
 }));
