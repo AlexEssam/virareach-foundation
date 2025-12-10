@@ -13,10 +13,27 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { 
-  Smartphone, Key, Shield, RefreshCw, Settings, 
-  Loader2, Check, X, Trash2, Save, Plus, RotateCcw, ExternalLink, Copy, Download, Pencil, Bot, Timer
+import {
+  Smartphone,
+  Key,
+  Shield,
+  RefreshCw,
+  Settings,
+  Loader2,
+  Check,
+  X,
+  Trash2,
+  Save,
+  Plus,
+  RotateCcw,
+  ExternalLink,
+  Copy,
+  Download,
+  Pencil,
+  Bot,
+  Timer,
 } from "lucide-react";
+import QRCode from "react-qr-code";
 
 interface TelegramAccount {
   id: string;
@@ -46,30 +63,30 @@ export default function TelegramAccountManager() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [accounts, setAccounts] = useState<TelegramAccount[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loginStep, setLoginStep] = useState<'idle' | 'opened' | 'success'>('idle');
-  
+  const [loginStep, setLoginStep] = useState<"idle" | "opened" | "success">("idle");
+
   // Global API settings
   const [globalApiId, setGlobalApiId] = useState("");
   const [globalApiHash, setGlobalApiHash] = useState("");
   const [globalSettingsLoaded, setGlobalSettingsLoaded] = useState(false);
   const [savingGlobalSettings, setSavingGlobalSettings] = useState(false);
-  
+
   // New account form
   const [phoneNumber, setPhoneNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [apiId, setApiId] = useState("");
   const [apiHash, setApiHash] = useState("");
   const [sessionString, setSessionString] = useState("");
-  
+
   // Proxy settings
   const [proxyHost, setProxyHost] = useState("");
   const [proxyPort, setProxyPort] = useState("");
   const [proxyUsername, setProxyUsername] = useState("");
   const [proxyPassword, setProxyPassword] = useState("");
-  
+
   // Rotation settings
   const [rotationEnabled, setRotationEnabled] = useState(true);
   const [rotationStrategy, setRotationStrategy] = useState("round_robin");
@@ -111,7 +128,7 @@ export default function TelegramAccountManager() {
       setApiId(globalApiId);
       setApiHash(globalApiHash);
     }
-  }, [globalSettingsLoaded, globalApiId, globalApiHash]);
+  }, [globalSettingsLoaded, globalApiId, globalApiHash, apiId, apiHash]);
 
   // Timer for verification code expiry
   useEffect(() => {
@@ -124,7 +141,7 @@ export default function TelegramAccountManager() {
       const now = new Date();
       const remaining = Math.max(0, Math.floor((codeExpiresAt.getTime() - now.getTime()) / 1000));
       setTimeRemaining(remaining);
-      
+
       if (remaining === 0) {
         setVerificationCode(null);
         setCodeExpiresAt(null);
@@ -140,9 +157,9 @@ export default function TelegramAccountManager() {
 
     const pollInterval = setInterval(async () => {
       const { data } = await supabase
-        .from('profiles')
-        .select('telegram_api_id, telegram_api_hash')
-        .eq('id', user!.id)
+        .from("profiles")
+        .select("telegram_api_id, telegram_api_hash")
+        .eq("id", user!.id)
         .single();
 
       if (data?.telegram_api_id && data?.telegram_api_hash) {
@@ -153,65 +170,61 @@ export default function TelegramAccountManager() {
           setApiHash(data.telegram_api_hash);
           setVerificationCode(null);
           setCodeExpiresAt(null);
-          toast({ 
-            title: "Credentials Updated!", 
-            description: "Your Telegram API credentials have been saved via the bot" 
+          toast({
+            title: "Credentials Updated!",
+            description: "Your Telegram API credentials have been saved via the bot",
           });
         }
       }
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [verificationCode, globalApiId, globalApiHash, user]);
+  }, [verificationCode, globalApiId, globalApiHash, user, toast]);
 
   const fetchGlobalApiSettings = async () => {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('telegram_api_id, telegram_api_hash')
-      .eq('id', user!.id)
+      .from("profiles")
+      .select("telegram_api_id, telegram_api_hash")
+      .eq("id", user!.id)
       .single();
 
     if (data) {
       setGlobalApiId(data.telegram_api_id || "");
       setGlobalApiHash(data.telegram_api_hash || "");
-      // Auto-fill form fields
       if (data.telegram_api_id) setApiId(data.telegram_api_id);
       if (data.telegram_api_hash) setApiHash(data.telegram_api_hash);
     }
     setGlobalSettingsLoaded(true);
-    if (error && error.code !== 'PGRST116') console.error('Error fetching global settings:', error);
+    if (error && error.code !== "PGRST116") console.error("Error fetching global settings:", error);
   };
 
   const handleSaveGlobalApiSettings = async () => {
-    // Validate both fields are filled
     const trimmedApiId = globalApiId.trim();
     const trimmedApiHash = globalApiHash.trim();
 
     if (!trimmedApiId || !trimmedApiHash) {
-      toast({ 
-        title: "Validation Error", 
-        description: "Both API ID and API Hash are required", 
-        variant: "destructive" 
+      toast({
+        title: "Validation Error",
+        description: "Both API ID and API Hash are required",
+        variant: "destructive",
       });
       return;
     }
 
-    // Validate API ID is numeric and reasonable length
     if (!/^\d{5,12}$/.test(trimmedApiId)) {
-      toast({ 
-        title: "Invalid API ID", 
-        description: "API ID should be a numeric value (5-12 digits) from my.telegram.org", 
-        variant: "destructive" 
+      toast({
+        title: "Invalid API ID",
+        description: "API ID should be a numeric value (5-12 digits) from my.telegram.org",
+        variant: "destructive",
       });
       return;
     }
 
-    // Validate API Hash is 32 characters hex
     if (!/^[a-f0-9]{32}$/i.test(trimmedApiHash)) {
-      toast({ 
-        title: "Invalid API Hash", 
-        description: "API Hash should be a 32-character hexadecimal string from my.telegram.org", 
-        variant: "destructive" 
+      toast({
+        title: "Invalid API Hash",
+        description: "API Hash should be a 32-character hexadecimal string from my.telegram.org",
+        variant: "destructive",
       });
       return;
     }
@@ -219,26 +232,26 @@ export default function TelegramAccountManager() {
     setSavingGlobalSettings(true);
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           telegram_api_id: trimmedApiId,
-          telegram_api_hash: trimmedApiHash
+          telegram_api_hash: trimmedApiHash,
         })
-        .eq('id', user!.id);
+        .eq("id", user!.id);
 
       if (error) throw error;
 
-      // Update state with trimmed values
       setGlobalApiId(trimmedApiId);
       setGlobalApiHash(trimmedApiHash);
-
-      // Auto-fill form with new global settings
       setApiId(trimmedApiId);
       setApiHash(trimmedApiHash);
 
-      toast({ title: "Global API Settings Saved", description: "These credentials will auto-fill for new accounts" });
+      toast({
+        title: "Global API Settings Saved",
+        description: "These credentials will auto-fill for new accounts",
+      });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setSavingGlobalSettings(false);
@@ -248,46 +261,36 @@ export default function TelegramAccountManager() {
   const generateVerificationCode = async () => {
     setGeneratingCode(true);
     try {
-      // Generate a random code like VR-A1B2C3
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let randomPart = '';
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let randomPart = "";
       for (let i = 0; i < 6; i++) {
         randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       const code = `VR-${randomPart}`;
-      
-      // Set expiry to 5 minutes from now
+
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-      // Delete any existing unused codes for this user
-      await supabase
-        .from('telegram_verification_codes')
-        .delete()
-        .eq('user_id', user!.id)
-        .eq('used', false);
+      await supabase.from("telegram_verification_codes").delete().eq("user_id", user!.id).eq("used", false);
 
-      // Insert new code
-      const { error } = await supabase
-        .from('telegram_verification_codes')
-        .insert({
-          user_id: user!.id,
-          code,
-          expires_at: expiresAt.toISOString(),
-          used: false
-        });
+      const { error } = await supabase.from("telegram_verification_codes").insert({
+        user_id: user!.id,
+        code,
+        expires_at: expiresAt.toISOString(),
+        used: false,
+      });
 
       if (error) throw error;
 
       setVerificationCode(code);
       setCodeExpiresAt(expiresAt);
-      setTimeRemaining(300); // 5 minutes in seconds
-      
-      toast({ 
-        title: "Verification Code Generated", 
-        description: "Send this code to the bot within 5 minutes" 
+      setTimeRemaining(300);
+
+      toast({
+        title: "Verification Code Generated",
+        description: "Send this code to the bot within 5 minutes",
       });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setGeneratingCode(false);
@@ -297,29 +300,32 @@ export default function TelegramAccountManager() {
   const formatTimeRemaining = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const fetchAccounts = async () => {
-    const { data, error } = await supabase
-      .from('telegram_accounts')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.from("telegram_accounts").select("*").order("created_at", { ascending: false });
 
     if (data) setAccounts(data);
-    if (error) console.error('Error fetching accounts:', error);
+    if (error) console.error("Error fetching accounts:", error);
   };
 
   const handleOpenTelegramWeb = () => {
-    window.open('https://web.telegram.org/', '_blank');
-    setLoginStep('opened');
-    toast({ title: "Telegram Web Opened", description: "Login to Telegram, then click 'I'm Logged In' below" });
+    window.open("https://web.telegram.org/", "_blank");
+    setLoginStep("opened");
+    toast({
+      title: "Telegram Web Opened",
+      description: "Login to Telegram, then click 'I'm Logged In' below",
+    });
   };
 
   const handleOpenTelegramDesktop = () => {
-    window.open('https://desktop.telegram.org/', '_blank');
-    setLoginStep('opened');
-    toast({ title: "Telegram Download Opened", description: "After installing and logging in, click 'I'm Logged In' below" });
+    window.open("https://desktop.telegram.org/", "_blank");
+    setLoginStep("opened");
+    toast({
+      title: "Telegram Download Opened",
+      description: "After installing and logging in, click 'I'm Logged In' below",
+    });
   };
 
   const handleCopyLink = (url: string, name: string) => {
@@ -329,14 +335,18 @@ export default function TelegramAccountManager() {
 
   const handleSaveAccount = async () => {
     if (!phoneNumber) {
-      toast({ title: "Error", description: "Please enter a phone number", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please enter a phone number",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('telegram_accounts')
+      const { error } = await supabase
+        .from("telegram_accounts")
         .insert({
           user_id: user!.id,
           phone_number: phoneNumber,
@@ -344,21 +354,20 @@ export default function TelegramAccountManager() {
           api_id: apiId || null,
           api_hash: apiHash || null,
           proxy_host: proxyHost || null,
-          proxy_port: proxyPort ? parseInt(proxyPort) : null,
+          proxy_port: proxyPort ? parseInt(proxyPort, 10) : null,
           proxy_username: proxyUsername || null,
           proxy_password: proxyPassword || null,
-          status: 'active',
-          session_data: sessionString || null
+          status: "active",
+          session_data: sessionString || null,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setLoginStep('success');
+      setLoginStep("success");
       toast({ title: "Account Saved", description: "Telegram account added successfully" });
-      
-      // Reset form
+
       setPhoneNumber("");
       setAccountName("");
       setApiId("");
@@ -368,11 +377,11 @@ export default function TelegramAccountManager() {
       setProxyPort("");
       setProxyUsername("");
       setProxyPassword("");
-      setLoginStep('idle');
-      
+      setLoginStep("idle");
+
       fetchAccounts();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -381,36 +390,32 @@ export default function TelegramAccountManager() {
 
   const handleDeleteAccount = async (accountId: string) => {
     try {
-      const { error } = await supabase
-        .from('telegram_accounts')
-        .delete()
-        .eq('id', accountId);
+      const { error } = await supabase.from("telegram_accounts").delete().eq("id", accountId);
 
       if (error) throw error;
 
       toast({ title: "Account Deleted" });
       fetchAccounts();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
   const handleToggleStatus = async (accountId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+
     try {
-      const { error } = await supabase
-        .from('telegram_accounts')
-        .update({ status: newStatus })
-        .eq('id', accountId);
+      const { error } = await supabase.from("telegram_accounts").update({ status: newStatus }).eq("id", accountId);
 
       if (error) throw error;
 
-      toast({ title: `Account ${newStatus === 'active' ? 'Activated' : 'Deactivated'}` });
+      toast({
+        title: `Account ${newStatus === "active" ? "Activated" : "Deactivated"}`,
+      });
       fetchAccounts();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
@@ -418,19 +423,19 @@ export default function TelegramAccountManager() {
   const handleResetDailyLimits = async () => {
     try {
       const { error } = await supabase
-        .from('telegram_accounts')
-        .update({ 
+        .from("telegram_accounts")
+        .update({
           messages_sent_today: 0,
-          groups_joined_today: 0
+          groups_joined_today: 0,
         })
-        .eq('user_id', user!.id);
+        .eq("user_id", user!.id);
 
       if (error) throw error;
 
       toast({ title: "Daily Limits Reset", description: "All account counters have been reset" });
       fetchAccounts();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
@@ -449,13 +454,13 @@ export default function TelegramAccountManager() {
     setEditSaving(true);
     try {
       const { error } = await supabase
-        .from('telegram_accounts')
+        .from("telegram_accounts")
         .update({
           api_id: editApiId || null,
           api_hash: editApiHash || null,
-          session_data: editSessionString || null
+          session_data: editSessionString || null,
         })
-        .eq('id', editingAccount.id);
+        .eq("id", editingAccount.id);
 
       if (error) throw error;
 
@@ -464,7 +469,7 @@ export default function TelegramAccountManager() {
       setEditingAccount(null);
       fetchAccounts();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred';
+      const message = error instanceof Error ? error.message : "An error occurred";
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setEditSaving(false);
@@ -472,7 +477,11 @@ export default function TelegramAccountManager() {
   };
 
   if (authLoading) {
-    return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -482,7 +491,9 @@ export default function TelegramAccountManager() {
         <div className="max-w-6xl mx-auto space-y-8">
           <div>
             <h1 className="text-3xl font-bold">Telegram Account Manager</h1>
-            <p className="text-muted-foreground mt-2">Manage accounts, login sessions, and multi-account rotation</p>
+            <p className="text-muted-foreground mt-2">
+              Manage accounts, login sessions, and multi-account rotation
+            </p>
           </div>
 
           <Tabs defaultValue="accounts" className="space-y-6">
@@ -492,7 +503,10 @@ export default function TelegramAccountManager() {
               <TabsTrigger value="api-settings">
                 API Settings
                 {globalApiId && globalApiHash && (
-                  <Badge variant="outline" className="ml-2 bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-500/10 text-green-600 border-green-500/20 text-[10px] px-1"
+                  >
                     <Check className="h-2 w-2" />
                   </Badge>
                 )}
@@ -514,7 +528,9 @@ export default function TelegramAccountManager() {
                   <CardContent className="py-12 text-center">
                     <Smartphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">No accounts added yet</p>
-                    <p className="text-sm text-muted-foreground mt-1">Add your first Telegram account to get started</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Add your first Telegram account to get started
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -528,10 +544,16 @@ export default function TelegramAccountManager() {
                               <Smartphone className="h-6 w-6 text-primary" />
                             </div>
                             <div>
-                              <p className="font-medium">{account.account_name || account.phone_number}</p>
-                              <p className="text-sm text-muted-foreground">{account.phone_number}</p>
+                              <p className="font-medium">
+                                {account.account_name || account.phone_number}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {account.phone_number}
+                              </p>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant={account.status === 'active' ? 'default' : 'secondary'}>
+                                <Badge
+                                  variant={account.status === "active" ? "default" : "secondary"}
+                                >
                                   {account.status}
                                 </Badge>
                                 {account.proxy_host && (
@@ -541,39 +563,61 @@ export default function TelegramAccountManager() {
                                   </Badge>
                                 )}
                                 {account.api_id && (
-                                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-green-500/10 text-green-600 border-green-500/20"
+                                  >
                                     <Key className="h-3 w-3 mr-1" />
                                     API ✓
                                   </Badge>
                                 )}
-                                {(account as any).session_data && !((account as any).session_data?.trim()?.startsWith('{')) && (account as any).session_data?.length > 100 ? (
-                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                {(account as any).session_data &&
+                                !((
+                                  account as any
+                                ).session_data?.trim()?.startsWith("{")) &&
+                                (account as any).session_data?.length > 100 ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-blue-500/10 text-blue-600 border-blue-500/20"
+                                  >
                                     <Check className="h-3 w-3 mr-1" />
                                     Session ✓
                                   </Badge>
                                 ) : (account as any).session_data ? (
-                                  <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-red-500/10 text-red-600 border-red-500/20"
+                                  >
                                     <X className="h-3 w-3 mr-1" />
                                     Invalid Session
                                   </Badge>
                                 ) : null}
-                                {(!account.api_id || !(account as any).session_data || ((account as any).session_data?.trim()?.startsWith('{'))) && (
-                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                {(!account.api_id ||
+                                  !(account as any).session_data ||
+                                  (account as any).session_data?.trim()?.startsWith("{")) && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                  >
                                     Mock Data Only
                                   </Badge>
                                 )}
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-6">
                             <div className="text-right text-sm">
                               <p className="text-muted-foreground">Messages Today</p>
-                              <p className="font-medium">{account.messages_sent_today || 0}</p>
+                              <p className="font-medium">
+                                {account.messages_sent_today || 0}
+                              </p>
                             </div>
                             <div className="text-right text-sm">
                               <p className="text-muted-foreground">Groups Today</p>
-                              <p className="font-medium">{account.groups_joined_today || 0}</p>
+                              <p className="font-medium">
+                                {account.groups_joined_today || 0}
+                              </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -585,8 +629,10 @@ export default function TelegramAccountManager() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Switch
-                                checked={account.status === 'active'}
-                                onCheckedChange={() => handleToggleStatus(account.id, account.status)}
+                                checked={account.status === "active"}
+                                onCheckedChange={() =>
+                                  handleToggleStatus(account.id, account.status)
+                                }
                               />
                               <Button
                                 variant="ghost"
@@ -614,7 +660,9 @@ export default function TelegramAccountManager() {
                       <ExternalLink className="h-5 w-5" />
                       Open Telegram to Login
                     </CardTitle>
-                    <CardDescription>Login on Telegram Web or Desktop, then save your account here</CardDescription>
+                    <CardDescription>
+                      Login on Telegram Web or Desktop, then save your account here
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -635,20 +683,30 @@ export default function TelegramAccountManager() {
                       />
                     </div>
 
-                    {loginStep === 'idle' && (
+                    {loginStep === "idle" && (
                       <>
                         <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">1</div>
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                              1
+                            </div>
                             <p className="text-sm">Enter your phone number above</p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">2</div>
-                            <p className="text-sm text-muted-foreground">Open Telegram and login</p>
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                              2
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Open Telegram and login
+                            </p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">3</div>
-                            <p className="text-sm text-muted-foreground">Click "I'm Logged In" then Save</p>
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                              3
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Click "I'm Logged In" then Save
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -656,24 +714,35 @@ export default function TelegramAccountManager() {
                             <ExternalLink className="mr-2 h-4 w-4" />
                             Open Telegram Web
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
-                            onClick={() => handleCopyLink('https://web.telegram.org/', 'Telegram Web')}
+                            onClick={() =>
+                              handleCopyLink("https://web.telegram.org/", "Telegram Web")
+                            }
                             title="Copy Link"
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={handleOpenTelegramDesktop} variant="outline" className="flex-1">
+                          <Button
+                            onClick={handleOpenTelegramDesktop}
+                            variant="outline"
+                            className="flex-1"
+                          >
                             <Download className="mr-2 h-4 w-4" />
                             Download Telegram Desktop
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
-                            onClick={() => handleCopyLink('https://desktop.telegram.org/', 'Telegram Desktop')}
+                            onClick={() =>
+                              handleCopyLink(
+                                "https://desktop.telegram.org/",
+                                "Telegram Desktop"
+                              )
+                            }
                             title="Copy Link"
                           >
                             <Copy className="h-4 w-4" />
@@ -682,7 +751,7 @@ export default function TelegramAccountManager() {
                       </>
                     )}
 
-                    {loginStep === 'opened' && (
+                    {loginStep === "opened" && (
                       <>
                         <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
                           <div className="flex items-center gap-3">
@@ -692,31 +761,56 @@ export default function TelegramAccountManager() {
                             <p className="text-sm">Phone number entered</p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">2</div>
-                            <p className="text-sm font-medium">Login to Telegram in the opened tab</p>
+                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                              2
+                            </div>
+                            <p className="text-sm font-medium">
+                              Login to Telegram in the opened tab
+                            </p>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">3</div>
-                            <p className="text-sm text-muted-foreground">Click "I'm Logged In" when done</p>
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
+                              3
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Click "I'm Logged In" when done
+                            </p>
                           </div>
                         </div>
-                        <Button onClick={handleSaveAccount} disabled={loading || !phoneNumber} className="w-full" size="lg">
-                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                        <Button
+                          onClick={handleSaveAccount}
+                          disabled={loading || !phoneNumber}
+                          className="w-full"
+                          size="lg"
+                        >
+                          {loading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="mr-2 h-4 w-4" />
+                          )}
                           I'm Logged In - Save Account
                         </Button>
-                        <Button variant="ghost" onClick={() => setLoginStep('idle')} className="w-full">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setLoginStep("idle")}
+                          className="w-full"
+                        >
                           Start Over
                         </Button>
                       </>
                     )}
 
-                    {loginStep === 'success' && (
+                    {loginStep === "success" && (
                       <div className="text-center py-4">
                         <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
                           <Check className="h-8 w-8 text-green-500" />
                         </div>
                         <p className="font-medium">Account Added Successfully!</p>
-                        <Button variant="outline" onClick={() => setLoginStep('idle')} className="mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => setLoginStep("idle")}
+                          className="mt-4"
+                        >
                           <Plus className="mr-2 h-4 w-4" />
                           Add Another Account
                         </Button>
@@ -726,20 +820,20 @@ export default function TelegramAccountManager() {
                 </Card>
 
                 <div className="space-y-6">
-                <Card>
+                  <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Key className="h-5 w-5" />
                         API Credentials
                         {globalApiId && globalApiHash && (
-                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-xs">
                             Auto-filled from Global Settings
                           </Badge>
                         )}
                       </CardTitle>
                       <CardDescription>
-                        {globalApiId && globalApiHash 
-                          ? "Pre-filled from your saved global API settings" 
+                        {globalApiId && globalApiHash
+                          ? "Pre-filled from your saved global API settings"
                           : "Configure in API Settings tab for auto-fill"}
                       </CardDescription>
                     </CardHeader>
@@ -772,8 +866,13 @@ export default function TelegramAccountManager() {
                       </div>
                       {!globalApiId && !globalApiHash && (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs space-y-2">
-                          <p className="font-medium text-amber-600">Tip: Save credentials globally</p>
-                          <p className="text-muted-foreground">Go to the <strong>API Settings</strong> tab to save your API credentials once. They'll auto-fill for all new accounts!</p>
+                          <p className="font-medium text-amber-600">
+                            Tip: Save credentials globally
+                          </p>
+                          <p className="text-muted-foreground">
+                            Go to the <strong>API Settings</strong> tab to save your API
+                            credentials once. They'll auto-fill for all new accounts!
+                          </p>
                         </div>
                       )}
                     </CardContent>
@@ -828,9 +927,17 @@ export default function TelegramAccountManager() {
                     </CardContent>
                   </Card>
 
-                  {loginStep === 'idle' && (
-                    <Button onClick={handleSaveAccount} disabled={loading} className="w-full">
-                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {loginStep === "idle" && (
+                    <Button
+                      onClick={handleSaveAccount}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
                       Save Account Manually
                     </Button>
                   )}
@@ -853,30 +960,54 @@ export default function TelegramAccountManager() {
                     )}
                   </CardTitle>
                   <CardDescription>
-                    Save your Telegram API credentials once and they'll auto-fill for all new accounts
+                    Save your Telegram API credentials once and they'll auto-fill for all
+                    new accounts
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">1</div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                        1
+                      </div>
                       <div>
                         <p className="font-medium">Get your API credentials</p>
-                        <p className="text-sm text-muted-foreground">Visit <a href="https://my.telegram.org/apps" target="_blank" rel="noopener" className="text-primary underline">my.telegram.org/apps</a> and create an application to get your API ID and Hash</p>
+                        <p className="text-sm text-muted-foreground">
+                          Visit{" "}
+                          <a
+                            href="https://my.telegram.org/apps"
+                            target="_blank"
+                            rel="noopener"
+                            className="text-primary underline"
+                          >
+                            my.telegram.org/apps
+                          </a>{" "}
+                          and create an application to get your API ID and Hash
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">2</div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                        2
+                      </div>
                       <div>
                         <p className="font-medium">Enter them below</p>
-                        <p className="text-sm text-muted-foreground">These will be saved securely and used for all your Telegram accounts</p>
+                        <p className="text-sm text-muted-foreground">
+                          These will be saved securely and used for all your Telegram
+                          accounts
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">3</div>
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                        3
+                      </div>
                       <div>
                         <p className="font-medium">Auto-fill enabled</p>
-                        <p className="text-sm text-muted-foreground">When adding new accounts, API credentials will be pre-filled automatically</p>
+                        <p className="text-sm text-muted-foreground">
+                          When adding new accounts, API credentials will be pre-filled
+                          automatically
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -889,7 +1020,9 @@ export default function TelegramAccountManager() {
                         value={globalApiId}
                         onChange={(e) => setGlobalApiId(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">Your Telegram API ID (numbers only)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your Telegram API ID (numbers only)
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>API Hash</Label>
@@ -899,12 +1032,14 @@ export default function TelegramAccountManager() {
                         value={globalApiHash}
                         onChange={(e) => setGlobalApiHash(e.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">Your Telegram API Hash (32 characters)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your Telegram API Hash (32 characters)
+                      </p>
                     </div>
                   </div>
 
-                  <Button 
-                    onClick={handleSaveGlobalApiSettings} 
+                  <Button
+                    onClick={handleSaveGlobalApiSettings}
                     disabled={savingGlobalSettings}
                     className="w-full"
                     size="lg"
@@ -925,31 +1060,56 @@ export default function TelegramAccountManager() {
                   <CardTitle className="flex items-center gap-2">
                     <Bot className="h-5 w-5" />
                     Link via Telegram Bot
-                    <Badge variant="outline" className="ml-2">Recommended</Badge>
+                    <Badge variant="outline" className="ml-2">
+                      Recommended
+                    </Badge>
                   </CardTitle>
                   <CardDescription>
-                    Securely register your API credentials by sending them to our Telegram bot
+                    Securely register your API credentials by sending them to our Telegram
+                    bot
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* QR code لفتح البوت مباشرة من كاميرا تيليجرام */}
+                  {!verificationCode && (
+                    <div className="flex flex-col items-center gap-3">
+                      <QRCode value="https://t.me/ViraReachBot" size={140} />
+                      <p className="text-xs text-muted-foreground text-center">
+                        Scan this QR with Telegram on your phone to open{" "}
+                        <span className="font-semibold">@ViraReachBot</span> directly.
+                      </p>
+                    </div>
+                  )}
+
                   {!verificationCode ? (
                     <>
                       <div className="p-4 bg-background/50 border rounded-lg space-y-3">
                         <div className="flex items-start gap-3">
-                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">1</div>
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            1
+                          </div>
                           <p className="text-sm">Generate a verification code below</p>
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">2</div>
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            2
+                          </div>
                           <p className="text-sm">Open the ViraReach bot in Telegram</p>
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">3</div>
-                          <p className="text-sm">Send: <code className="bg-muted px-1 rounded">/register CODE API_ID API_HASH</code></p>
+                          <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            3
+                          </div>
+                          <p className="text-sm">
+                            Send:{" "}
+                            <code className="bg-muted px-1 rounded">
+                              /register CODE API_ID API_HASH
+                            </code>
+                          </p>
                         </div>
                       </div>
-                      <Button 
-                        onClick={generateVerificationCode} 
+                      <Button
+                        onClick={generateVerificationCode}
                         disabled={generatingCode}
                         className="w-full"
                         size="lg"
@@ -965,17 +1125,22 @@ export default function TelegramAccountManager() {
                   ) : (
                     <>
                       <div className="p-6 bg-background border rounded-lg text-center space-y-4">
-                        <p className="text-sm text-muted-foreground">Your verification code:</p>
+                        <p className="text-sm text-muted-foreground">
+                          Your verification code:
+                        </p>
                         <div className="flex items-center justify-center gap-2">
                           <code className="text-3xl font-mono font-bold tracking-wider bg-muted px-4 py-2 rounded-lg">
                             {verificationCode}
                           </code>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="icon"
                             onClick={() => {
                               navigator.clipboard.writeText(verificationCode);
-                              toast({ title: "Copied!", description: "Verification code copied to clipboard" });
+                              toast({
+                                title: "Copied!",
+                                description: "Verification code copied to clipboard",
+                              });
                             }}
                           >
                             <Copy className="h-4 w-4" />
@@ -983,7 +1148,9 @@ export default function TelegramAccountManager() {
                         </div>
                         <div className="flex items-center justify-center gap-2 text-amber-600">
                           <Timer className="h-4 w-4" />
-                          <span className="text-sm font-medium">Expires in {formatTimeRemaining(timeRemaining)}</span>
+                          <span className="text-sm font-medium">
+                            Expires in {formatTimeRemaining(timeRemaining)}
+                          </span>
                         </div>
                       </div>
 
@@ -993,12 +1160,17 @@ export default function TelegramAccountManager() {
                           <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto">
                             /register {verificationCode} YOUR_API_ID YOUR_API_HASH
                           </code>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => {
-                              navigator.clipboard.writeText(`/register ${verificationCode} YOUR_API_ID YOUR_API_HASH`);
-                              toast({ title: "Copied!", description: "Command template copied to clipboard" });
+                              navigator.clipboard.writeText(
+                                `/register ${verificationCode} YOUR_API_ID YOUR_API_HASH`
+                              );
+                              toast({
+                                title: "Copied!",
+                                description: "Command template copied to clipboard",
+                              });
                             }}
                           >
                             <Copy className="h-3 w-3" />
@@ -1007,16 +1179,18 @@ export default function TelegramAccountManager() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="flex-1"
-                          onClick={() => window.open('https://t.me/ViraReachBot', '_blank')}
+                          onClick={() =>
+                            window.open("https://t.me/ViraReachBot", "_blank")
+                          }
                         >
                           <ExternalLink className="mr-2 h-4 w-4" />
                           Open Bot in Telegram
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           onClick={() => {
                             setVerificationCode(null);
                             setCodeExpiresAt(null);
@@ -1043,27 +1217,49 @@ export default function TelegramAccountManager() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="p-4 bg-background border rounded-lg space-y-3">
-                    <p className="text-sm font-medium">Why are extractions returning 0 results?</p>
+                    <p className="text-sm font-medium">
+                      Why are extractions returning 0 results?
+                    </p>
                     <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
-                      <li>Your accounts have <strong>login metadata</strong> stored, not a valid <strong>GramJS session string</strong></li>
-                      <li>A valid session string is a long (200+ characters) base64-encoded string</li>
-                      <li>Without it, the app falls back to <strong>mock data</strong> (currently returning empty results due to API issues)</li>
+                      <li>
+                        Your accounts have <strong>login metadata</strong> stored, not a
+                        valid <strong>GramJS session string</strong>
+                      </li>
+                      <li>
+                        A valid session string is a long (200+ characters) base64-encoded
+                        string
+                      </li>
+                      <li>
+                        Without it, the app falls back to <strong>mock data</strong>{" "}
+                        (currently returning empty results due to API issues)
+                      </li>
                     </ul>
                   </div>
-                  
+
                   <div className="grid gap-2">
                     <p className="text-sm font-medium">Your Accounts:</p>
                     {accounts.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No accounts added yet</p>
+                      <p className="text-sm text-muted-foreground">
+                        No accounts added yet
+                      </p>
                     ) : (
                       accounts.map((account) => {
                         const sessionData = (account as any).session_data;
-                        const isValidSession = sessionData && typeof sessionData === 'string' && !sessionData.trim().startsWith('{') && sessionData.length > 100;
+                        const isValidSession =
+                          sessionData &&
+                          typeof sessionData === "string" &&
+                          !sessionData.trim().startsWith("{") &&
+                          sessionData.length > 100;
                         return (
-                          <div key={account.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div
+                            key={account.id}
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                          >
                             <div className="flex items-center gap-2">
                               <Smartphone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">{account.account_name || account.phone_number}</span>
+                              <span className="text-sm font-medium">
+                                {account.account_name || account.phone_number}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               {isValidSession ? (
@@ -1081,7 +1277,11 @@ export default function TelegramAccountManager() {
                                   No Session
                                 </Badge>
                               )}
-                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(account)}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(account)}
+                              >
                                 <Pencil className="h-3 w-3" />
                               </Button>
                             </div>
@@ -1096,19 +1296,27 @@ export default function TelegramAccountManager() {
               <Card>
                 <CardHeader>
                   <CardTitle>How to Get a Valid Session String</CardTitle>
-                  <CardDescription>Required for each account to enable real API extraction</CardDescription>
+                  <CardDescription>
+                    Required for each account to enable real API extraction
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                    <p className="text-sm font-medium mb-2">What is a session string?</p>
+                    <p className="text-sm font-medium mb-2">
+                      What is a session string?
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      A session string is a long base64-encoded token (200+ characters) that authenticates your Telegram account via the MTProto API. 
-                      It's generated when you login using the Telethon library. The "login metadata" stored when you click "I'm Logged In" is NOT a session string.
+                      A session string is a long base64-encoded token (200+ characters)
+                      that authenticates your Telegram account via the MTProto API. It's
+                      generated when you login using the Telethon library. The "login
+                      metadata" stored when you click "I'm Logged In" is NOT a session
+                      string.
                     </p>
                   </div>
-                  
+
                   <p className="text-sm text-muted-foreground">
-                    After saving your global API credentials, generate a session string for each Telegram account using this Python script:
+                    After saving your global API credentials, generate a session string for
+                    each Telegram account using this Python script:
                   </p>
                   <pre className="p-4 bg-muted rounded-lg text-xs overflow-x-auto">
 {`pip install telethon
@@ -1117,8 +1325,8 @@ python -c "
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
 
-api_id = ${globalApiId || 'YOUR_API_ID'}
-api_hash = '${globalApiHash || 'YOUR_API_HASH'}'
+api_id = ${globalApiId || "YOUR_API_ID"}
+api_hash = '${globalApiHash || "YOUR_API_HASH"}'
 
 with TelegramClient(StringSession(), api_id, api_hash) as client:
     print('Your session string:')
@@ -1126,8 +1334,9 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
 "`}
                   </pre>
                   <p className="text-sm text-muted-foreground">
-                    Run this script, login with your phone number when prompted, and copy the output session string. 
-                    Then click the <strong>Edit</strong> button on your account above and paste it into the Session String field.
+                    Run this script, login with your phone number when prompted, and copy
+                    the output session string. Then click the <strong>Edit</strong> button
+                    on your account above and paste it into the Session String field.
                   </p>
                 </CardContent>
               </Card>
@@ -1140,22 +1349,32 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                     <RefreshCw className="h-5 w-5" />
                     Multi-Account Rotation
                   </CardTitle>
-                  <CardDescription>Configure how accounts are rotated during automation</CardDescription>
+                  <CardDescription>
+                    Configure how accounts are rotated during automation
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Enable Account Rotation</Label>
-                      <p className="text-sm text-muted-foreground">Automatically switch between accounts</p>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically switch between accounts
+                      </p>
                     </div>
-                    <Switch checked={rotationEnabled} onCheckedChange={setRotationEnabled} />
+                    <Switch
+                      checked={rotationEnabled}
+                      onCheckedChange={setRotationEnabled}
+                    />
                   </div>
 
                   {rotationEnabled && (
                     <>
                       <div className="space-y-2">
                         <Label>Rotation Strategy</Label>
-                        <Select value={rotationStrategy} onValueChange={setRotationStrategy}>
+                        <Select
+                          value={rotationStrategy}
+                          onValueChange={setRotationStrategy}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -1164,7 +1383,9 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                               <SelectItem key={strategy.value} value={strategy.value}>
                                 <div>
                                   <p>{strategy.label}</p>
-                                  <p className="text-xs text-muted-foreground">{strategy.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {strategy.description}
+                                  </p>
                                 </div>
                               </SelectItem>
                             ))}
@@ -1180,7 +1401,9 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                             value={maxDailyMessages}
                             onChange={(e) => setMaxDailyMessages(e.target.value)}
                           />
-                          <p className="text-xs text-muted-foreground">Per account limit</p>
+                          <p className="text-xs text-muted-foreground">
+                            Per account limit
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label>Max Daily Groups</Label>
@@ -1189,7 +1412,9 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                             value={maxDailyGroups}
                             onChange={(e) => setMaxDailyGroups(e.target.value)}
                           />
-                          <p className="text-xs text-muted-foreground">Groups to join per day</p>
+                          <p className="text-xs text-muted-foreground">
+                            Groups to join per day
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <Label>Cooldown (minutes)</Label>
@@ -1198,16 +1423,23 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                             value={cooldownMinutes}
                             onChange={(e) => setCooldownMinutes(e.target.value)}
                           />
-                          <p className="text-xs text-muted-foreground">Between switches</p>
+                          <p className="text-xs text-muted-foreground">
+                            Between switches
+                          </p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Auto-Switch on Limit</Label>
-                          <p className="text-sm text-muted-foreground">Switch when account reaches daily limit</p>
+                          <p className="text-sm text-muted-foreground">
+                            Switch when account reaches daily limit
+                          </p>
                         </div>
-                        <Switch checked={autoSwitchOnLimit} onCheckedChange={setAutoSwitchOnLimit} />
+                        <Switch
+                          checked={autoSwitchOnLimit}
+                          onCheckedChange={setAutoSwitchOnLimit}
+                        />
                       </div>
                     </>
                   )}
@@ -1232,19 +1464,27 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
                     </div>
                     <div className="p-4 rounded-lg bg-green-500/10 text-center">
                       <p className="text-2xl font-bold text-green-500">
-                        {accounts.filter(a => a.status === 'active').length}
+                        {accounts.filter((a) => a.status === "active").length}
                       </p>
                       <p className="text-sm text-muted-foreground">Active</p>
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50 text-center">
                       <p className="text-2xl font-bold">
-                        {accounts.reduce((sum, a) => sum + (a.messages_sent_today || 0), 0)}
+                        {accounts.reduce(
+                          (sum, a) => sum + (a.messages_sent_today || 0),
+                          0
+                        )}
                       </p>
-                      <p className="text-sm text-muted-foreground">Messages Today</p>
+                      <p className="text-sm text-muted-foreground">
+                        Messages Today
+                      </p>
                     </div>
                     <div className="p-4 rounded-lg bg-muted/50 text-center">
                       <p className="text-2xl font-bold">
-                        {accounts.reduce((sum, a) => sum + (a.groups_joined_today || 0), 0)}
+                        {accounts.reduce(
+                          (sum, a) => sum + (a.groups_joined_today || 0),
+                          0
+                        )}
                       </p>
                       <p className="text-sm text-muted-foreground">Groups Today</p>
                     </div>
@@ -1265,10 +1505,11 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
               Edit API Credentials
             </DialogTitle>
             <DialogDescription>
-              Update API credentials for {editingAccount?.account_name || editingAccount?.phone_number}
+              Update API credentials for{" "}
+              {editingAccount?.account_name || editingAccount?.phone_number}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>API ID</Label>
@@ -1298,14 +1539,14 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-xs">
               <p className="font-medium mb-1">Need credentials?</p>
-              <a 
-                href="https://my.telegram.org/apps" 
-                target="_blank" 
-                rel="noopener" 
+              <a
+                href="https://my.telegram.org/apps"
+                target="_blank"
+                rel="noopener"
                 className="text-primary underline flex items-center gap-1"
               >
                 <ExternalLink className="h-3 w-3" />
-                Get API ID & Hash from my.telegram.org
+                Get API ID &amp; Hash from my.telegram.org
               </a>
             </div>
           </div>
@@ -1315,7 +1556,11 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
               Cancel
             </Button>
             <Button onClick={handleSaveApiCredentials} disabled={editSaving}>
-              {editSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {editSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
               Save Credentials
             </Button>
           </DialogFooter>
