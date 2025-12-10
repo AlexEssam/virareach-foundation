@@ -126,8 +126,7 @@ export default function WhatsAppSending() {
 
     setSending(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      // Call Edge Function; Supabase client will include the current auth token automatically
       const response = await supabase.functions.invoke("whatsapp-send", {
         body: {
           campaign_name: campaignName,
@@ -138,16 +137,26 @@ export default function WhatsAppSending() {
           recipients: recipientList,
           sending_mode: sendingMode,
         },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
-      if (response.error) throw response.error;
+      // Handle non-2xx + server error messages more clearly
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to send campaign";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Sending failed on the server. Please check your WhatsApp campaign configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Campaign Completed",
-        description: response.data.message,
+        description: response.data?.message || "Campaign finished (simulation mode).",
       });
       
       setCampaignName("");
