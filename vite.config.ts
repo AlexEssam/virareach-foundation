@@ -19,4 +19,6 @@ export default defineConfig(({ mode }) => ({
   define: {
     // Ensure only VITE_ prefixed variables are exposed to client
   },
+  // Additional security: prevent non-VITE_ prefixed env vars from being bundled
+  envPrefix: 'VITE_',
 }));
