@@ -98,23 +98,30 @@ export default function FacebookExtractor() {
 
     setExtracting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const response = await supabase.functions.invoke("facebook-extract", {
         body: {
           extraction_type: extractionType,
           source_url: sourceUrl,
         },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to extract data";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Extraction failed on the server. Please check your Facebook extractor configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Extraction Complete",
-        description: response.data.message,
+        description: response.data?.message || "Extraction finished (simulation mode).",
       });
       
       setSourceUrl("");

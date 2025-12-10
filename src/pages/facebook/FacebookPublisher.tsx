@@ -113,8 +113,6 @@ export default function FacebookPublisher() {
 
     setPublishing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const targetIdsArray = targetIds
         .split("\n")
         .map(id => id.trim())
@@ -127,16 +125,25 @@ export default function FacebookPublisher() {
           content,
           target_ids: targetIdsArray.length > 0 ? targetIdsArray : null,
         },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to publish";
+
+        const friendlyMessage =
+          rawMessage === "Edge Function returned a non-2xx status code"
+            ? "Publishing failed on the server. Please check your Facebook publisher configuration or try again later."
+            : rawMessage;
+
+        throw new Error(friendlyMessage);
+      }
 
       toast({
         title: "Publication Complete",
-        description: response.data.message,
+        description: response.data?.message || "Publication finished (simulation mode).",
       });
       
       setContent("");

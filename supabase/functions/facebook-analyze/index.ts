@@ -33,53 +33,63 @@ Deno.serve(async (req) => {
       });
     }
 
+    const url = new URL(req.url);
+    const actionFromUrl = url.searchParams.get("action");
+
     if (req.method === "POST") {
       const body = await req.json();
-      const { group_url, group_id } = body;
+      const action = (body.action || actionFromUrl) as string | null;
 
-      console.log(`Facebook group analysis: url=${group_url}, id=${group_id}`);
+      // Analyze group
+      if (!action || action === "analyze") {
+        const { group_url, group_id } = body;
 
-      // Stub implementation - returns mock analysis
-      const mockAnalysis = {
-        group_id: group_id || extractGroupId(group_url),
-        name: "Sample Facebook Group",
-        members_count: Math.floor(Math.random() * 100000) + 1000,
-        type: ["Public", "Private", "Closed"][Math.floor(Math.random() * 3)],
-        url: group_url || `https://facebook.com/groups/${group_id}`,
-        created_date: "2020-01-15",
-        posts_per_day: Math.floor(Math.random() * 50) + 5,
-        engagement_rate: (Math.random() * 10 + 1).toFixed(2) + "%",
-        top_posting_times: ["9:00 AM", "12:00 PM", "6:00 PM", "9:00 PM"],
-        admin_count: Math.floor(Math.random() * 10) + 1,
-        recent_growth: `+${Math.floor(Math.random() * 1000)} members this month`,
-        analyzed_at: new Date().toISOString(),
-      };
+        console.log(`Facebook group analysis: url=${group_url}, id=${group_id}`);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        analysis: mockAnalysis,
-        message: "Group analysis completed (simulation mode)"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+        const mockAnalysis = {
+          group_id: group_id || extractGroupId(group_url),
+          name: "Sample Facebook Group",
+          members_count: Math.floor(Math.random() * 100000) + 1000,
+          type: ["Public", "Private", "Closed"][Math.floor(Math.random() * 3)],
+          url: group_url || `https://facebook.com/groups/${group_id}`,
+          created_date: "2020-01-15",
+          posts_per_day: Math.floor(Math.random() * 50) + 5,
+          engagement_rate: (Math.random() * 10 + 1).toFixed(2) + "%",
+          top_posting_times: ["9:00 AM", "12:00 PM", "6:00 PM", "9:00 PM"],
+          admin_count: Math.floor(Math.random() * 10) + 1,
+          recent_growth: `+${Math.floor(Math.random() * 1000)} members this month`,
+          analyzed_at: new Date().toISOString(),
+        };
 
-    // POST URL to ID conversion
-    if (req.method === "PUT") {
-      const body = await req.json();
-      const { post_url } = body;
+        return new Response(JSON.stringify({ 
+          success: true, 
+          analysis: mockAnalysis,
+          message: "Group analysis completed (simulation mode)"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-      console.log(`Converting post URL: ${post_url}`);
+      // Convert post URL to ID
+      if (action === "convert_post_url") {
+        const { post_url } = body;
 
-      // Extract post ID from URL (simulation)
-      const mockPostId = extractPostId(post_url);
+        console.log(`Converting post URL: ${post_url}`);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        post_id: mockPostId,
-        original_url: post_url,
-        message: "Post ID extracted (simulation mode)"
-      }), {
+        const mockPostId = extractPostId(post_url);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          post_id: mockPostId,
+          original_url: post_url,
+          message: "Post ID extracted (simulation mode)"
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

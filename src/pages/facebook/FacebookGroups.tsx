@@ -52,12 +52,29 @@ export default function FacebookGroups() {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("facebook-groups", { method: "GET" });
-      if (data?.groups) {
-        setGroups(data.groups);
+      const response = await supabase.functions.invoke("facebook-groups", {
+        body: { action: "list" },
+      });
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to load groups";
+
+        throw new Error(rawMessage);
+      }
+      if (response.data?.groups) {
+        setGroups(response.data.groups);
+      } else {
+        setGroups([]);
       }
     } catch (error) {
       console.error("Error fetching groups:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load groups",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -72,15 +89,22 @@ export default function FacebookGroups() {
 
     setJoining(true);
     try {
-      const { data, error } = await supabase.functions.invoke("facebook-groups?action=join", {
-        body: { group_urls: urls },
+      const response = await supabase.functions.invoke("facebook-groups", {
+        body: { action: "join", group_urls: urls },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to join groups";
+
+        throw new Error(rawMessage);
+      }
 
       toast({
         title: "Groups Joined",
-        description: data.message,
+        description: response.data?.message || "Groups joined (simulation mode).",
       });
 
       setGroupUrls("");
@@ -104,17 +128,24 @@ export default function FacebookGroups() {
 
     setSearching(true);
     try {
-      const interests = searchInterests.split(",").map(i => i.trim());
-      const { data, error } = await supabase.functions.invoke("facebook-groups?action=extract", {
-        body: { interests, limit: 20 },
+      const interests = searchInterests.split(",").map(i => i.trim()).filter(i => i);
+      const response = await supabase.functions.invoke("facebook-groups", {
+        body: { action: "extract", interests, limit: 20 },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to search groups";
 
-      setSearchResults(data.groups || []);
+        throw new Error(rawMessage);
+      }
+
+      setSearchResults(response.data?.groups || []);
       toast({
         title: "Search Complete",
-        description: data.message,
+        description: response.data?.message || "Groups search completed.",
       });
     } catch (error: any) {
       toast({
@@ -129,15 +160,25 @@ export default function FacebookGroups() {
 
   const handleAnalyzeGroup = async (groupId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke("facebook-groups?action=analyze", {
-        body: { group_id: groupId },
+      const response = await supabase.functions.invoke("facebook-groups", {
+        body: { action: "analyze", group_id: groupId },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to analyze group";
 
+        throw new Error(rawMessage);
+      }
+
+      const analysis = response.data?.analysis;
       toast({
         title: "Analysis Complete",
-        description: `Can post: ${data.analysis.can_post ? "Yes" : "No"}. Activity: ${data.analysis.member_activity}`,
+        description: analysis
+          ? `Can post: ${analysis.can_post ? "Yes" : "No"}. Activity: ${analysis.member_activity}`
+          : "Analysis completed.",
       });
 
       fetchGroups();
@@ -152,11 +193,18 @@ export default function FacebookGroups() {
 
   const handleLeaveGroup = async (groupId: string) => {
     try {
-      const { error } = await supabase.functions.invoke("facebook-groups?action=remove", {
-        body: { group_id: groupId },
+      const response = await supabase.functions.invoke("facebook-groups", {
+        body: { action: "remove", group_id: groupId },
       });
 
-      if (error) throw error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to leave group";
+
+        throw new Error(rawMessage);
+      }
 
       toast({ title: "Left group successfully" });
       fetchGroups();

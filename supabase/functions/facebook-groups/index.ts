@@ -34,10 +34,11 @@ Deno.serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const actionFromUrl = url.searchParams.get("action");
 
     if (req.method === "POST") {
       const body = await req.json();
+      const action = (body.action || actionFromUrl) as string | null;
 
       // Action: Join groups
       if (action === "join") {
@@ -106,7 +107,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Simulate analysis
         const analysis = {
           can_post: group.can_post,
           has_rules: group.has_rules,
@@ -120,7 +120,6 @@ Deno.serve(async (req) => {
           member_activity: Math.random() > 0.5 ? "high" : "medium",
         };
 
-        // Update group with analysis
         await supabase
           .from("facebook_groups")
           .update({

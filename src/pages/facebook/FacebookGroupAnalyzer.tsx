@@ -56,21 +56,23 @@ export default function FacebookGroupAnalyzer() {
 
     setAnalyzing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const response = await supabase.functions.invoke("facebook-analyze", {
-        body: { group_url: groupUrl },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+        body: { action: "analyze", group_url: groupUrl },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to analyze group";
 
-      setAnalysis(response.data.analysis);
+        throw new Error(rawMessage);
+      }
+
+      setAnalysis(response.data?.analysis);
       toast({
         title: "Analysis Complete",
-        description: response.data.message,
+        description: response.data?.message || "Group analysis completed.",
       });
     } catch (error: any) {
       console.error("Error analyzing:", error);
@@ -96,22 +98,23 @@ export default function FacebookGroupAnalyzer() {
 
     setConverting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const response = await supabase.functions.invoke("facebook-analyze", {
-        method: "PUT",
-        body: { post_url: postUrl },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+        body: { action: "convert_post_url", post_url: postUrl },
       });
 
-      if (response.error) throw response.error;
+      if (response.error || response.data?.error) {
+        const rawMessage =
+          response.data?.error ||
+          response.error?.message ||
+          "Failed to convert URL";
 
-      setConvertedPostId(response.data.post_id);
+        throw new Error(rawMessage);
+      }
+
+      setConvertedPostId(response.data?.post_id);
       toast({
         title: "Conversion Complete",
-        description: `Post ID: ${response.data.post_id}`,
+        description: `Post ID: ${response.data?.post_id}`,
       });
     } catch (error: any) {
       console.error("Error converting:", error);
