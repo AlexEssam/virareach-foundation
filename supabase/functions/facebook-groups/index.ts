@@ -40,6 +40,27 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const action = (body.action || actionFromUrl) as string | null;
 
+      // Action: List groups (used by frontend fetchGroups)
+      if (action === "list") {
+        const { data, error } = await supabase
+          .from("facebook_groups")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching groups:", error);
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ groups: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Action: Join groups
       if (action === "join") {
         const { group_urls, account_id } = body;
