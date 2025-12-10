@@ -1,9 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,7 +39,7 @@ export default function AIImageModule() {
   const [variationCount, setVariationCount] = useState(2);
   const [batchCount, setBatchCount] = useState(4);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -51,19 +50,19 @@ export default function AIImageModule() {
     }
   };
 
-  const callAIImage = async (action: string, params: Record<string, any>) => {
+  const callAIImage = async (action: string, params: Record<string, unknown>) => {
     setLoading(true);
     setGeneratedImage(null);
     setGeneratedImages([]);
     
     try {
-      const { data, error } = await supabase.functions.invoke('ai-image', {
+      const { data, error } = await supabase.functions.invoke("ai-image", {
         body: { action, ...params }
       });
 
       if (error) {
-        console.error('Function invoke error:', error);
-        throw new Error(error.message || 'Failed to call AI service');
+        console.error("Function invoke error:", error);
+        throw new Error(error.message || "Failed to call AI service");
       }
 
       if (data?.error) {
@@ -74,21 +73,27 @@ export default function AIImageModule() {
         setGeneratedImages(data.images);
         toast.success(`Generated ${data.images.length} images!`);
       } else {
-        const imageUrl = data?.image_url || data?.styled_image_url || data?.upscaled_image_url || 
-                        data?.enhanced_face_image || data?.result_image_url || data?.transparent_image_url;
+        const imageUrl =
+          data?.image_url ||
+          data?.styled_image_url ||
+          data?.upscaled_image_url || 
+          data?.enhanced_face_image ||
+          data?.result_image_url ||
+          data?.transparent_image_url;
+
         if (imageUrl) {
           setGeneratedImage(imageUrl);
           toast.success("Image generated successfully!");
         } else {
-          console.error('No image in response:', data);
+          console.error("No image in response:", data);
           toast.error("No image was generated. Please try again.");
         }
       }
     } catch (error: any) {
-      console.error('AI Image error:', error);
-      if (error.message?.includes('Rate limit')) {
+      console.error("AI Image error:", error);
+      if (error.message?.includes("Rate limit")) {
         toast.error("Rate limit exceeded. Please wait a moment and try again.");
-      } else if (error.message?.includes('Credits')) {
+      } else if (error.message?.includes("Credits")) {
         toast.error("Credits exhausted. Please add more credits to continue.");
       } else {
         toast.error(error.message || "Failed to process image");
@@ -99,7 +104,7 @@ export default function AIImageModule() {
   };
 
   const downloadImage = (imageUrl: string, filename: string) => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = imageUrl;
     link.download = filename;
     document.body.appendChild(link);
@@ -108,14 +113,14 @@ export default function AIImageModule() {
   };
 
   const styles = [
-    { id: 'oil_painting', name: 'Oil Painting' },
-    { id: 'watercolor', name: 'Watercolor' },
-    { id: 'pencil_sketch', name: 'Pencil Sketch' },
-    { id: 'anime', name: 'Anime' },
-    { id: 'pop_art', name: 'Pop Art' },
-    { id: 'cyberpunk', name: 'Cyberpunk' },
-    { id: 'vintage', name: 'Vintage' },
-    { id: 'minimalist', name: 'Minimalist' },
+    { id: "oil_painting", name: "Oil Painting" },
+    { id: "watercolor", name: "Watercolor" },
+    { id: "pencil_sketch", name: "Pencil Sketch" },
+    { id: "anime", name: "Anime" },
+    { id: "pop_art", name: "Pop Art" },
+    { id: "cyberpunk", name: "Cyberpunk" },
+    { id: "vintage", name: "Vintage" },
+    { id: "minimalist", name: "Minimalist" },
   ];
 
   // Show login prompt if not authenticated
@@ -134,7 +139,7 @@ export default function AIImageModule() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
-                <Button onClick={() => navigate('/login')}>
+                <Button onClick={() => navigate("/login")}>
                   <LogIn className="h-4 w-4 mr-2" />
                   Go to Login
                 </Button>
@@ -211,23 +216,36 @@ export default function AIImageModule() {
                     onChange={(e) => setPrompt(e.target.value)}
                     rows={3}
                   />
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 flex-wrap">
                     <Button
-                      onClick={() => callAIImage('generate_image', { prompt })}
+                      onClick={() => callAIImage("generate_image", { prompt })}
                       disabled={loading || !prompt}
                     >
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Wand2 className="h-4 w-4 mr-2" />
+                      )}
                       Generate
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => callAIImage('batch_generate', { prompt, count: batchCount, high_quality: true })}
+                      onClick={() =>
+                        callAIImage("batch_generate", {
+                          prompt,
+                          count: batchCount,
+                          high_quality: true,
+                        })
+                      }
                       disabled={loading || !prompt}
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       توليد {batchCount} صور بجودة عالية
                     </Button>
-                    <Select value={batchCount.toString()} onValueChange={(v) => setBatchCount(parseInt(v))}>
+                    <Select
+                      value={batchCount.toString()}
+                      onValueChange={(v) => setBatchCount(parseInt(v))}
+                    >
                       <SelectTrigger className="w-24">
                         <SelectValue />
                       </SelectTrigger>
@@ -270,7 +288,9 @@ export default function AIImageModule() {
                     rows={2}
                   />
                   <Button
-                    onClick={() => callAIImage('image_to_image', { image: uploadedImage, prompt })}
+                    onClick={() =>
+                      callAIImage("image_to_image", { image: uploadedImage, prompt })
+                    }
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -308,7 +328,9 @@ export default function AIImageModule() {
                     rows={2}
                   />
                   <Button
-                    onClick={() => callAIImage('sketch_to_image', { image: uploadedImage, prompt })}
+                    onClick={() =>
+                      callAIImage("sketch_to_image", { image: uploadedImage, prompt })
+                    }
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -352,7 +374,12 @@ export default function AIImageModule() {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => callAIImage('style_transfer', { image: uploadedImage, style_id: styleId })}
+                    onClick={() =>
+                      callAIImage("style_transfer", {
+                        image: uploadedImage,
+                        style_id: styleId,
+                      })
+                    }
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -385,7 +412,10 @@ export default function AIImageModule() {
                   )}
                   <div className="flex gap-4 items-center">
                     <span className="text-sm">Number of variations:</span>
-                    <Select value={variationCount.toString()} onValueChange={(v) => setVariationCount(parseInt(v))}>
+                    <Select
+                      value={variationCount.toString()}
+                      onValueChange={(v) => setVariationCount(parseInt(v))}
+                    >
                       <SelectTrigger className="w-24">
                         <SelectValue />
                       </SelectTrigger>
@@ -397,7 +427,12 @@ export default function AIImageModule() {
                     </Select>
                   </div>
                   <Button
-                    onClick={() => callAIImage('variations', { image: uploadedImage, count: variationCount })}
+                    onClick={() =>
+                      callAIImage("variations", {
+                        image: uploadedImage,
+                        count: variationCount,
+                      })
+                    }
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -435,7 +470,9 @@ export default function AIImageModule() {
                     rows={2}
                   />
                   <Button
-                    onClick={() => callAIImage('inpainting', { image: uploadedImage, prompt })}
+                    onClick={() =>
+                      callAIImage("inpainting", { image: uploadedImage, prompt })
+                    }
                     disabled={loading || !uploadedImage || !prompt}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -467,7 +504,7 @@ export default function AIImageModule() {
                     <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
                   )}
                   <Button
-                    onClick={() => callAIImage('upscale', { image: uploadedImage })}
+                    onClick={() => callAIImage("upscale", { image: uploadedImage })}
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -499,7 +536,7 @@ export default function AIImageModule() {
                     <img src={uploadedImage} alt="Original" className="max-h-48 rounded-lg" />
                   )}
                   <Button
-                    onClick={() => callAIImage('face_enhance', { image: uploadedImage })}
+                    onClick={() => callAIImage("face_enhance", { image: uploadedImage })}
                     disabled={loading || !uploadedImage}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -536,12 +573,12 @@ export default function AIImageModule() {
                         alt="Generated" 
                         className="max-w-full max-h-[600px] mx-auto object-contain"
                         onError={(e) => {
-                          console.error('Image failed to load');
-                          e.currentTarget.style.display = 'none';
+                          console.error("Image failed to load");
+                          e.currentTarget.style.display = "none";
                         }}
                       />
                     </div>
-                    <Button onClick={() => downloadImage(generatedImage, 'ai-generated.png')}>
+                    <Button onClick={() => downloadImage(generatedImage, "ai-generated.png")}>
                       <Download className="h-4 w-4 mr-2" />
                       Download
                     </Button>
@@ -557,11 +594,14 @@ export default function AIImageModule() {
                             alt={`Generated ${idx + 1}`} 
                             className="w-full object-contain"
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.style.display = "none";
                             }}
                           />
                         </div>
-                        <Button size="sm" onClick={() => downloadImage(img, `ai-generated-${idx + 1}.png`)}>
+                        <Button
+                          size="sm"
+                          onClick={() => downloadImage(img, `ai-generated-${idx + 1}.png`)}
+                        >
                           <Download className="h-4 w-4 mr-1" />
                           Download
                         </Button>
