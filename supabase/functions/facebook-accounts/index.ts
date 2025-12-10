@@ -1,155 +1,119 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateRequest, createAuthResponse, createErrorResponse } from '../_shared/auth.ts'
+import { corsHeaders } from '../_shared/cors.ts'
+import { validateString, validateEmail, sanitizeString } from '../_shared/validation.ts'
+import { checkRateLimit, getRateLimitHeaders } from '../_shared/rate-limit.ts'
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+)
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Authenticate user
+    const { user, error: authError } = await authenticateRequest(req)
+    if (authError) {
+      return createErrorResponse(authError, 401)
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Rate limiting
+    const rateLimitResult = checkRateLimit(user.id, 30, 60000) // 30 requests per minute per user
+    if (!rateLimitResult.allowed) {
+      return createErrorResponse('Rate limit exceeded', 429)
     }
 
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
-
-    if (req.method === "POST") {
-      const body = await req.json();
-
-      if (action === "add") {
-        // Add new Facebook account
-        const { account_name, account_email, proxy_host, proxy_port, proxy_username, proxy_password, cookies } = body;
-        
-        const { data, error } = await supabase
-          .from("facebook_accounts")
-          .insert({
-            user_id: user.id,
-            account_name,
-            account_email,
-            proxy_host,
-            proxy_port,
-            proxy_username,
-            proxy_password,
-            cookies,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Error adding account:", error);
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        return new Response(JSON.stringify({ success: true, account: data }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (action === "remove") {
-        // Remove Facebook account
-        const { account_id } = body;
-        
-        const { error } = await supabase
-          .from("facebook_accounts")
-          .delete()
-          .eq("id", account_id)
-          .eq("user_id", user.id);
-
-        if (error) {
-          console.error("Error removing account:", error);
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      if (action === "update") {
-        // Update Facebook account
-        const { account_id, ...updateData } = body;
-        
-        const { data, error } = await supabase
-          .from("facebook_accounts")
-          .update(updateData)
-          .eq("id", account_id)
-          .eq("user_id", user.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Error updating account:", error);
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        return new Response(JSON.stringify({ success: true, account: data }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    if (req.method === "GET") {
-      // Get all accounts for user
+    if (req.method === 'GET') {
+      // Get user's Facebook accounts only
       const { data, error } = await supabase
-        .from("facebook_accounts")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .from('facebook_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
       if (error) {
-        console.error("Error fetching accounts:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.error('Database error:', error)
+        return createErrorResponse('Failed to fetch accounts', 500)
       }
 
-      return new Response(JSON.stringify({ accounts: data }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const headers = {
+        ...corsHeaders,
+        ...getRateLimitHeaders(rateLimitResult.resetTime!)
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { 
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    if (req.method === 'POST') {
+      const { account_name, email, password, cookies } = await req.json()
+
+      // Validate inputs
+      const nameValidation = validateString(account_name, 'account_name', 100)
+      const emailValidation = validateEmail(email)
+      
+      if (!nameValidation.isValid || !emailValidation.isValid) {
+        const errors = [...nameValidation.errors, ...emailValidation.errors]
+        return createErrorResponse(`Invalid input: ${errors.join(', ')}`, 400)
+      }
+
+      const sanitizedName = sanitizeString(account_name)
+
+      // Insert account with user_id
+      const { data, error } = await supabase
+        .from('facebook_accounts')
+        .insert({
+          user_id: user.id,
+          account_name: sanitizedName,
+          email: email.toLowerCase(),
+          password: password, // Note: Consider encrypting this
+          cookies: cookies,
+          status: 'active',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Database error:', error)
+        return createErrorResponse('Failed to create account', 500)
+      }
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: user.id,
+        action: 'facebook_account_added',
+        details: { account_name: sanitizedName },
+        created_at: new Date().toISOString()
+      })
+
+      const headers = {
+        ...corsHeaders,
+        ...getRateLimitHeaders(rateLimitResult.resetTime!)
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { 
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          status: 201 
+        }
+      )
+    }
+
+    return createErrorResponse('Method not allowed', 405)
   } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error('Function error:', error)
+    return createErrorResponse('Internal server error', 500)
   }
-});
+})

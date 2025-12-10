@@ -1,19 +1,49 @@
-// This file is for server-side use only (Supabase Edge Functions)
-// Do NOT import this in client-side code
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+import { createClient } from './client'
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// This file now only provides type-safe interfaces to call secure Edge Functions
+// No service role key is exposed on the client side
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing Supabase environment variables for admin client');
+export interface AdminOperation {
+  operation: string
+  data?: any
 }
 
-// Admin client with full privileges - use only in server-side code
-export const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export async function callAdminFunction(functionName: string, operation: AdminOperation) {
+  const supabase = createClient()
+  
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw new Error('Authentication required')
   }
-});
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(operation),
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Operation failed')
+  }
+
+  return response.json()
+}
+
+// Example secure admin functions
+export const adminApi = {
+  // User management
+  getUserData: (userId: string) => callAdminFunction('admin-user-data', { operation: 'get_user', data: { userId } }),
+  
+  // Analytics
+  getUsageStats: (timeRange: string) => callAdminFunction('admin-analytics', { operation: 'usage_stats', data: { timeRange } }),
+  
+  // System health
+  getSystemStatus: () => callAdminFunction('admin-system', { operation: 'status' }),
+}
