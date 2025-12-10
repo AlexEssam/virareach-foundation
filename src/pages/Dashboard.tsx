@@ -13,7 +13,7 @@ import {
   SiInstagram, 
   SiTelegram 
 } from "@icons-pack/react-simple-icons";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -196,7 +196,11 @@ export default function Dashboard() {
             <h2 className="text-xl font-semibold mb-4">Automation Modules</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {modules.map((module, index) => (
-                <div key={module.title} className="animate-fade-in" style={{ animationDelay: `${0.7 + index * 0.1}s` }}>
+                <div
+                  key={module.title}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${0.7 + index * 0.1}s` }}
+                >
                   <ModuleCard
                     title={module.title}
                     description={module.description}
