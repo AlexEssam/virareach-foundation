@@ -162,7 +162,15 @@ export default function WhatsAppAccounts() {
       startStatusPolling(data.sessionId);
     } catch (error: any) {
       console.error("Error generating QR:", error);
-      setConnectionError(error.message || "Failed to generate QR code");
+      let message = error?.message || "Failed to generate QR code";
+
+      // Friendlier message when Edge Function fails (e.g. missing proxy / backend config)
+      if (message === "Edge Function returned a non-2xx status code") {
+        message =
+          "WhatsApp connection is not configured on the server. This feature requires a WhatsApp proxy (WHATSAPP_WEB_PROXY_URL) to be set up by the admin.";
+      }
+
+      setConnectionError(message);
       setConnectionState("failed");
     }
   };
@@ -285,7 +293,14 @@ export default function WhatsAppAccounts() {
       startStatusPolling(data.sessionId);
     } catch (error: any) {
       console.error("Error reconnecting:", error);
-      setConnectionError(error.message || "Failed to start reconnection");
+      let message = error?.message || "Failed to start reconnection";
+
+      if (message === "Edge Function returned a non-2xx status code") {
+        message =
+          "WhatsApp connection is not configured on the server. This feature requires a WhatsApp proxy (WHATSAPP_WEB_PROXY_URL) to be set up by the admin.";
+      }
+
+      setConnectionError(message);
       setConnectionState("failed");
     }
   };
@@ -355,7 +370,12 @@ export default function WhatsAppAccounts() {
   }
 
   // QR Code Dialog Content Component
-  const QRCodeDialogContent = () => (
+  const QRCodeDialogContent = () => {
+    const isConfigError =
+      connectionError?.toLowerCase().includes("proxy") ||
+      connectionError?.toLowerCase().includes("not configured");
+
+    return (
     <div className="py-4 space-y-6">
       {connectionState === "idle" && (
         <div className="flex flex-col items-center">
@@ -464,17 +484,24 @@ export default function WhatsAppAccounts() {
           <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mb-4">
             <AlertCircle className="h-10 w-10 text-destructive" />
           </div>
-          <h3 className="text-lg font-medium mb-1">Connection Failed</h3>
+          <h3 className="text-lg font-medium mb-1">
+            {isConfigError ? "WhatsApp Connection Not Configured" : "Connection Failed"}
+          </h3>
           <p className="text-sm text-muted-foreground text-center mb-4">
-            {connectionError || "Unable to connect. Please try again."}
+            {connectionError ||
+              (isConfigError
+                ? "WhatsApp linking is not configured on the server. Please ask the administrator to set up the WhatsApp proxy before using this feature."
+                : "Unable to connect. Please try again.")}
           </p>
-          <Button 
-            className="bg-[#25D366] hover:bg-[#25D366]/90"
-            onClick={generateQRCode}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
+          {!isConfigError && (
+            <Button 
+              className="bg-[#25D366] hover:bg-[#25D366]/90"
+              onClick={generateQRCode}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          )}
         </div>
       )}
 
@@ -491,7 +518,8 @@ export default function WhatsAppAccounts() {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
