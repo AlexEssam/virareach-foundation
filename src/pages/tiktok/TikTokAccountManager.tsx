@@ -54,14 +54,14 @@ const securityPresets = [
 ];
 
 export default function TikTokAccountManager() {
-  // الشرح بالعربي: استخدام نفس نمط فيسبوك لوجود Sidebar قابل للطي + إحصائيات أعلى الصفحة + أزرار سريعة
+  // الشرح: نفس نمط فيسبوك، Sidebar قابل للطي + إحصائيات + تبويب إضافة حساب مضبوط مع الـ Edge Function
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginStep, setLoginStep] = useState<"idle" | "success">("idle");
   const [showPassword, setShowPassword] = useState(false);
@@ -100,15 +100,29 @@ export default function TikTokAccountManager() {
 
   const fetchAccounts = async () => {
     if (!user) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("tiktok_accounts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    if (data) setAccounts(data);
-    if (error) console.error("Error fetching accounts:", error);
-    setLoading(false);
+    setAccountsLoading(true);
+    try {
+      const response = await supabase.functions.invoke("tiktok-accounts", {
+        body: { action: "get_accounts" },
+      });
+      if (response.error) {
+        throw response.error;
+      }
+      if (response.data?.accounts) {
+        setAccounts(response.data.accounts as TikTokAccount[]);
+      } else {
+        setAccounts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load TikTok accounts",
+        variant: "destructive",
+      });
+    } finally {
+      setAccountsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -117,10 +131,6 @@ export default function TikTokAccountManager() {
 
   const activeAccounts = useMemo(
     () => accounts.filter((a) => a.status === "active"),
-    [accounts]
-  );
-  const accountsWithProxy = useMemo(
-    () => accounts.filter((a) => a.proxy_host),
     [accounts]
   );
   const totalTodayActions = useMemo(
@@ -159,8 +169,69 @@ export default function TikTokAccountManager() {
     });
   };
 
+  // حفظ الحساب عبر Edge Function tiktok-accounts
+  const handleSaveAccount = async (): Promise<boolean> => {
+    if (!username.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a username",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add an account",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const body = {
+        action: "add_account",
+        username: username.replace("@", "").trim(),
+        account_name: accountName || `TikTok @${username}`,
+        proxy_host: proxyHost || null,
+        proxy_port: proxyPort ? parseInt(proxyPort, 10) : null,
+        proxy_username: proxyUsername || null,
+        proxy_password: proxyPassword || null,
+        session_data: {
+          verified: true,
+          savedAt: new Date().toISOString(),
+        },
+      };
+
+      const response = await supabase.functions.invoke("tiktok-accounts", {
+        body,
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      toast({
+        title: "Account Saved",
+        description: "TikTok account added successfully",
+      });
+      resetForm();
+      await fetchAccounts();
+      return true;
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save account";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleCredentialsLogin = async () => {
-    // الشرح: هنا ما زال الحساب "login" وهمي، لكن نحافظ على نفس السلوك الحالي ونحفظ الجلسة في Supabase
+    // الشرح: نحاكي تأخير الـ login، ثم نحفظ الحساب عبر الـ Edge Function، ونظهر النجاح فقط لو الحفظ نجح
     if (!username || !password) {
       toast({
         title: "Error",
@@ -170,54 +241,15 @@ export default function TikTokAccountManager() {
       return;
     }
     setLoginLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setLoginStep("success");
-    setLoginLoading(false);
-    await handleSaveAccount();
-  };
-
-  const handleSaveAccount = async () => {
-    if (!username) {
-      toast({
-        title: "Error",
-        description: "Please enter a username",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
     try {
-      const { error } = await supabase.from("tiktok_accounts").insert({
-        user_id: user!.id,
-        username: username.replace("@", ""),
-        account_name: accountName || `TikTok @${username}`,
-        proxy_host: proxyHost || null,
-        proxy_port: proxyPort ? parseInt(proxyPort) : null,
-        proxy_username: proxyUsername || null,
-        proxy_password: proxyPassword || null,
-        status: "active",
-        session_data: JSON.stringify({
-          verified: true,
-          savedAt: new Date().toISOString(),
-        }),
-      });
-      if (error) throw error;
-      toast({
-        title: "Account Saved",
-        description: "TikTok account added successfully",
-      });
-      resetForm();
-      fetchAccounts();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "An error occurred";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
+      // يمكن هنا لاحقاً ربط login الحقيقي (Puppeteer/أتمتة)، الآن مجرد تأخير للواجهة
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const ok = await handleSaveAccount();
+      if (ok) {
+        setLoginStep("success");
+      }
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
@@ -234,12 +266,13 @@ export default function TikTokAccountManager() {
 
   const handleDeleteAccount = async (accountId: string) => {
     try {
-      const { error } = await supabase
-        .from("tiktok_accounts")
-        .delete()
-        .eq("id", accountId);
-      if (error) throw error;
-      toast({ title: "Account Deleted" });
+      const response = await supabase.functions.invoke("tiktok-accounts", {
+        body: { action: "delete_account", account_id: accountId },
+      });
+      if (response.error) {
+        throw response.error;
+      }
+      toast({ title: "Account Deleted", description: "TikTok account removed" });
       fetchAccounts();
     } catch (error: unknown) {
       const message =
@@ -255,11 +288,12 @@ export default function TikTokAccountManager() {
   const handleToggleStatus = async (accountId: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
-      const { error } = await supabase
-        .from("tiktok_accounts")
-        .update({ status: newStatus })
-        .eq("id", accountId);
-      if (error) throw error;
+      const response = await supabase.functions.invoke("tiktok-accounts", {
+        body: { action: "update_account", account_id: accountId, status: newStatus },
+      });
+      if (response.error) {
+        throw response.error;
+      }
       toast({
         title: `Account ${
           newStatus === "active" ? "Activated" : "Deactivated"
@@ -278,6 +312,7 @@ export default function TikTokAccountManager() {
   };
 
   const handleResetDailyLimits = async () => {
+    // الشرح: إعادة تعيين الحدود اليومية تبقى مباشرة على الجدول لأنها عملية داخلية بسيطة
     try {
       const { error } = await supabase
         .from("tiktok_accounts")
@@ -316,7 +351,7 @@ export default function TikTokAccountManager() {
   const goToMentions = () => navigate("/tiktok/mentions");
   const goToFollow = () => navigate("/tiktok/follow");
 
-  if (authLoading || loading && accounts.length === 0) {
+  if (authLoading || (accountsLoading && accounts.length === 0)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -1036,7 +1071,7 @@ export default function TikTokAccountManager() {
   );
 }
 
-// أيقونة @ بسيطة باستخدام lucide-react (بدون استيراد جديد)
+// أيقونة @ بسيطة باستخدام SVG (بدون استيراد جديد)
 function AtSignIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
