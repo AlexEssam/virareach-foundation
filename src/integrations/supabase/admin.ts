@@ -1,4 +1,4 @@
-import { createClient } from './client'
+import { supabase } from './client'
 
 // This file now only provides type-safe interfaces to call secure Edge Functions
 // No service role key is exposed on the client side
@@ -9,8 +9,6 @@ export interface AdminOperation {
 }
 
 export async function callAdminFunction(functionName: string, operation: AdminOperation) {
-  const supabase = createClient()
-  
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
     throw new Error('Authentication required')

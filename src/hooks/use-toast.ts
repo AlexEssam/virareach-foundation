@@ -1,13 +1,11 @@
 import { useState, useCallback } from "react";
+import type { ReactNode } from "react";
 
 export interface Toast {
   id?: string;
   title?: string;
   description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?: ReactNode;
   variant?: "default" | "destructive";
   duration?: number;
 }
